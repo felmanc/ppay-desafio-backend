@@ -1,7 +1,5 @@
 package br.com.felmanc.ppaysimplificado.services;
 
-import java.util.Optional;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -12,7 +10,9 @@ import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.enums.TransactionStatus;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class TransactionService {
 
@@ -25,50 +25,51 @@ public class TransactionService {
         this.userRepository = userRepository;
         this.webClient = webClient;
     }
-    
+
     @Transactional
     public TransactionEntity transfer(Long payerId, Long payeeId, Double value) {
-        // Verifica se os usuários existem
-        Optional<UserEntity> payerOpt = userRepository.findById(payerId);
-        Optional<UserEntity> payeeOpt = userRepository.findById(payeeId);
+        log.info("Iniciando transferência de {} do usuário {} para o usuário {}", value, payerId, payeeId);
 
-        if (payerOpt.isEmpty() || payeeOpt.isEmpty()) {
-            throw new IllegalArgumentException("Pagador ou recebedor não encontrado.");
-        }
+        UserEntity payer = userRepository.findById(payerId)
+                .orElseThrow(() -> {
+                    log.error("Pagador não encontrado com ID: {}", payerId);
+                    return new IllegalArgumentException("Pagador não encontrado.");
+                });
 
-        UserEntity payer = payerOpt.get();
-        UserEntity payee = payeeOpt.get();
+        UserEntity payee = userRepository.findById(payeeId)
+                .orElseThrow(() -> {
+                    log.error("Recebedor não encontrado com ID: {}", payeeId);
+                    return new IllegalArgumentException("Recebedor não encontrado.");
+                });
 
-        // Valida saldo do pagador
         if (payer.getBalance() < value) {
+            log.error("Saldo insuficiente para o pagador com ID: {}", payerId);
             throw new IllegalArgumentException("Saldo insuficiente.");
         }
 
-        // Atualiza saldos
         payer.setBalance(payer.getBalance() - value);
         payee.setBalance(payee.getBalance() + value);
 
-        // Cria a transação
         TransactionEntity transaction = new TransactionEntity();
         transaction.setValue(value);
         transaction.setPayer(payer);
         transaction.setPayee(payee);
         transaction.setStatus(TransactionStatus.PENDING);
 
-        // Salva a transação como pendente
         transaction = transactionRepository.save(transaction);
+        log.info("Transação criada com status PENDING. ID da transação: {}", transaction.getId());
 
-        // Simula autorização de serviço externo
         boolean authorized = authorizeTransaction();
     	if (!authorized) {
+            log.error("Transação não autorizada. ID da transação: {}", transaction.getId());
     	    transaction.setStatus(TransactionStatus.FAILED);
-    	    transactionRepository.save(transaction); // Salva como falhada
+    	    transactionRepository.save(transaction);
     	    throw new IllegalStateException("Transação não autorizada pelo serviço externo.");
     	}
 
-        // Atualiza o status para COMPLETED
         transaction.setStatus(TransactionStatus.COMPLETED);
         transactionRepository.save(transaction);
+        log.info("Transação concluída com sucesso. ID da transação: {}", transaction.getId());
 
         return transaction;
     }

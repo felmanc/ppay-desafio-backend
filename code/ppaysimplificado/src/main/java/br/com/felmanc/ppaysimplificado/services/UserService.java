@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class UserService {
 
@@ -28,19 +30,20 @@ public class UserService {
     }
     
     public UserEntity createUser(UserEntity userEntity) {
-        // Valida se o CPF já existe
+        log.info("Iniciando criação de usuário com CPF: {}", userEntity.getCpf());
+
         Optional<UserEntity> existingByCpf = userRepository.findByCpf(userEntity.getCpf());
         if (existingByCpf.isPresent()) {
+            log.warn("Tentativa de criar usuário com CPF duplicado: {}", userEntity.getCpf());
             throw new IllegalArgumentException("Já existe um usuário com este CPF.");
         }
 
-        // Valida se o e-mail já existe
         Optional<UserEntity> existingByEmail = userRepository.findByEmail(userEntity.getEmail());
         if (existingByEmail.isPresent()) {
+            log.warn("Tentativa de criar usuário com e-mail duplicado: {}", userEntity.getEmail());
             throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
         }
 
-        // Define saldo inicial e validações adicionais, se necessário
         if (userEntity.getBalance() == null) {
             userEntity.setBalance(0.0); // Saldo padrão inicial
         }
@@ -49,18 +52,23 @@ public class UserService {
             throw new IllegalArgumentException("O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
         }
 
-        // Salva o usuário no banco
-        return userRepository.save(userEntity);
+        UserEntity savedUser = userRepository.save(userEntity);
+        log.info("Usuário criado com sucesso: {}", savedUser.getId());
+
+        return savedUser;
     }
 
     public List<UserEntity> getAllUsers() {
-        // Busca todos os usuários no banco de dados
+        log.info("Buscando todos os usuários");
         return userRepository.findAll();
     }
 
     public UserEntity getUserById(Long id) {
-        // Busca o usuário pelo ID e lança exceção caso não encontre
+        log.info("Buscando usuário pelo ID: {}", id);
         return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário com o ID " + id + " não foi encontrado."));
+                .orElseThrow(() -> {
+                    log.error("Usuário com ID {} não encontrado", id);
+                    return new IllegalArgumentException("Usuário com o ID " + id + " não foi encontrado.");
+                });
     }
 }
