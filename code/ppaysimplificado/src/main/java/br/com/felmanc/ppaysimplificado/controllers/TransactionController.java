@@ -1,5 +1,7 @@
 package br.com.felmanc.ppaysimplificado.controllers;
 
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,11 +21,19 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    public TransactionController(TransactionService transactionService) {
-        this.transactionService = transactionService;
+    private final TransactionMapper transactionMapper;
+
+    public TransactionController(TransactionService transactionService, TransactionMapper transactionMapper) {
+		this.transactionService = transactionService;
+		this.transactionMapper = transactionMapper;
+	}
+
+    @EventListener(ContextRefreshedEvent.class)
+    public void checkBean() {
+        log.info("TransactionMapper bean loaded: {}", (transactionMapper != null));
     }
 
-    @PostMapping("/transfer")
+	@PostMapping("/transfer")
     public ResponseEntity<TransactionDTO> transfer(@RequestBody TransactionDTO transactionDTO) {
         log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}",
                 transactionDTO.getPayerId(), transactionDTO.getPayeeId(), transactionDTO.getValue());
@@ -32,7 +42,7 @@ public class TransactionController {
                 transactionDTO.getPayeeId(),
                 transactionDTO.getValue()
         );
-        TransactionDTO response = TransactionMapper.INSTANCE.toDTO(transactionEntity);
+        TransactionDTO response = transactionMapper.toDTO(transactionEntity);
         log.info("Transferência realizada com sucesso. ID da Transação: {}", response.getId());
         return ResponseEntity.ok(response);
     }

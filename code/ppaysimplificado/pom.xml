@@ -58,12 +58,12 @@
 		<dependency>
 		    <groupId>org.mapstruct</groupId>
 		    <artifactId>mapstruct</artifactId>
-		    <version>1.5.5.Final</version> <!-- Use a versão mais recente -->
+		    <version>1.5.5.Final</version>
 		</dependency>
 		<dependency>
 		    <groupId>org.mapstruct</groupId>
 		    <artifactId>mapstruct-processor</artifactId>
-		    <version>1.5.5.Final</version> <!-- Mesma versão do MapStruct -->
+		    <version>1.5.5.Final</version>
 		    <scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -98,7 +98,12 @@
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
 						</path>
-					</annotationProcessorPaths>
+		                <path>
+		                    <groupId>org.mapstruct</groupId>
+		                    <artifactId>mapstruct-processor</artifactId>
+		    				<version>1.5.3.Final</version>
+		                </path>
+		            </annotationProcessorPaths>
 				</configuration>
 			</plugin>
 			<plugin>

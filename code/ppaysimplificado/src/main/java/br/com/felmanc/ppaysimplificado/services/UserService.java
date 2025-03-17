@@ -60,7 +60,9 @@ public class UserService {
 
     public List<UserEntity> getAllUsers() {
         log.info("Buscando todos os usuários");
-        return userRepository.findAll();
+        List<UserEntity> userEntities = userRepository.findAll();
+        log.info("Obtidos todos os usuários. Encontrados: {}", userEntities.size());
+        return userEntities;
     }
 
     public UserEntity getUserById(Long id) {

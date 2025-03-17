@@ -1,19 +1,15 @@
 package br.com.felmanc.ppaysimplificado.mappers;
 
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
+import org.mapstruct.Mapping;
 
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface UserMapper {
-
-    UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
-
-    // Mapeia de UserEntity para UserDTO
     UserDTO toDTO(UserEntity userEntity);
 
-    // Mapeia de UserDTO para UserEntity
+    @Mapping(target = "password", ignore = true)
     UserEntity toEntity(UserDTO userDTO);
 }
