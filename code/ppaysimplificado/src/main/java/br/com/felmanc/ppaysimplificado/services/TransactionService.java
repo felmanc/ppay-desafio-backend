@@ -20,7 +20,6 @@ import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
-import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -28,18 +27,22 @@ import lombok.extern.slf4j.Slf4j;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
+    private final NotificationService notificationService; 
     private final WebClient webClient;
     private final TransactionMapper transactionMapper;
 
-    public TransactionService(TransactionRepository transactionRepository, UserRepository userRepository, WebClient webClient, TransactionMapper transactionMapper) {
-        this.transactionRepository = transactionRepository;
-        this.userRepository = userRepository;
-        this.webClient = webClient;
-        this.transactionMapper = transactionMapper;
-    }
 
-    @Transactional
+    public TransactionService(TransactionRepository transactionRepository, UserService userService,
+			NotificationService notificationService, WebClient webClient, TransactionMapper transactionMapper) {
+		this.transactionRepository = transactionRepository;
+		this.userService = userService;
+		this.notificationService = notificationService;
+		this.webClient = webClient;
+		this.transactionMapper = transactionMapper;
+	}
+
+	@Transactional
     public TransactionDTO transfer(TransactionDTO transactionDTO) {
         log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.getValor(), transactionDTO.getIdPagador(), transactionDTO.getIdRecebedor());
@@ -50,11 +53,12 @@ public class TransactionService {
             throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
         }
         
-        UserEntity payer = userRepository.findById(transactionDTO.getIdPagador())
-                .orElseThrow(() -> {
-                    log.error("Pagador não encontrado com ID: {}.", transactionDTO.getIdPagador());
-                    return new IllegalArgumentException("Pagador não encontrado.");
-                });
+        UserEntity payer;
+        try {
+        	payer = userService.findUserEntityById(transactionDTO.getIdPagador());
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Pagador não encontrado.");
+		}
 
         if(payer.getType().equals(UserType.MERCHANT))
         {
@@ -62,44 +66,53 @@ public class TransactionService {
             throw new IllegalArgumentException("Pagador não pode ser lojista.");
         }
         
-        UserEntity payee = userRepository.findById(transactionDTO.getIdRecebedor())
-                .orElseThrow(() -> {
-                    log.error("Recebedor não encontrado com ID: {}", transactionDTO.getIdRecebedor());
-                    return new IllegalArgumentException("Recebedor não encontrado.");
-                });
+        UserEntity payee;
+        try {
+        	payee = userService.findUserEntityById(transactionDTO.getIdRecebedor());
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Recebedor não encontrado.");
+		}
 
-        if (payer.getBalance() < transactionDTO.getValor()) {
+        if (payer.getBalance().compareTo(transactionDTO.getValor()) < 0) {
             log.error("Saldo insuficiente para o pagador com ID: {}", transactionDTO.getIdPagador());
             throw new IllegalArgumentException("Saldo insuficiente.");
         }
 
-        payer.setBalance(payer.getBalance() - transactionDTO.getValor());
-        payee.setBalance(payee.getBalance() + transactionDTO.getValor());
+        payer.setBalance(payer.getBalance().subtract(transactionDTO.getValor()));
+        payee.setBalance(payee.getBalance().add(transactionDTO.getValor()));
 
+        if (transactionDTO.getData() == null) {
+            transactionDTO.setData(LocalDateTime.now());
+        }        
+        
         TransactionEntity transaction = new TransactionEntity();
         transaction.setValue(transactionDTO.getValor());
         transaction.setPayer(payer);
         transaction.setPayee(payee);
         transaction.setStatus(TransactionStatus.PENDING);
-
-        // Definir a data atual se não fornecida
-        if (transactionDTO.getData() == null) {
-            transactionDTO.setData(LocalDateTime.now());
-        }
         transaction.setTimestamp(transactionDTO.getData());
 
         transaction = transactionRepository.save(transaction);
+        
+        try {
+            if (!authorizeTransaction(transaction)) {
+                transaction.setStatus(TransactionStatus.FAILED);
+                throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
+            }			
+		} catch (Exception e) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            throw e;
+		}
 
-        boolean authorized = authorizeTransaction(transaction);
-        if (!authorized) {
-            transactionRepository.save(transaction);
-            throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
+
+        log.info("Transação autorizada pelo serviço externo.");
+        transaction.setStatus(TransactionStatus.AUTHORIZED);
+        
+        if(notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: ." + transaction.getId())) {
+            log.info("Notificação efetuada com sucesso.");
         }
         
-        log.info("Transação autorizada pelo serviço externo.");
-        
         transaction.setStatus(TransactionStatus.COMPLETED);
-        transactionRepository.save(transaction);
 
         return transactionMapper.toDTO(transaction);
     }
@@ -117,15 +130,11 @@ public class TransactionService {
             JsonNode jsonNode = objectMapper.readTree(response);
 
             String status = jsonNode.path("status").asText();
+
             boolean authorization = jsonNode.path("data").path("authorization").asBoolean();
 
-            if ("success".equalsIgnoreCase(status)) {
-                transaction.setStatus(TransactionStatus.AUTHORIZED);
-            } else {
-                transaction.setStatus(TransactionStatus.FAILED);
-            }
 
-            return authorization;
+            return "success".equalsIgnoreCase(status) && authorization;
         } catch (WebClientResponseException e) {
             if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
                 throw new UnauthorizedTransactionException("Acesso não autorizado. Verifique suas credenciais.");

@@ -1,5 +1,6 @@
 package br.com.felmanc.ppaysimplificado.services;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,7 +41,8 @@ public class UserService {
             throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
         }
 
-        userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(0.0));
+        userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(new BigDecimal("0.0")));
+        
         if (userEntity.getType() == null) {
             throw new IllegalArgumentException("O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
         }
@@ -58,14 +60,19 @@ public class UserService {
                 .map(userMapper::toDTO)
                 .collect(Collectors.toList());
     }
-
+    
     public UserDTO getUserById(Long id) {
         log.info("Buscando usuário pelo ID: {}", id);
+        UserEntity userEntity = findUserEntityById(id);
+        return userMapper.toDTO(userEntity);
+    }
+
+    public UserEntity findUserEntityById(Long id) {
         UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Usuário com ID {} não encontrado", id);
                     return new IllegalArgumentException("Usuário com o ID " + id + " não foi encontrado.");
                 });
-        return userMapper.toDTO(userEntity);
+        return userEntity;
     }
 }
