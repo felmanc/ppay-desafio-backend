@@ -1,5 +1,7 @@
 package br.com.felmanc.ppaysimplificado.dtos;
 
+import java.math.BigDecimal;
+
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import lombok.Data;
 
@@ -10,6 +12,6 @@ public class UserDTO {
     private String cpf;
     private String email;
     private String senha;
-    private Double saldo;
+    private BigDecimal saldo;
     private UserType tipo;
 }

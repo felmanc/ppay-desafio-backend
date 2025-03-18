@@ -1,5 +1,6 @@
 package br.com.felmanc.ppaysimplificado.dtos;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import lombok.Data;
@@ -7,7 +8,7 @@ import lombok.Data;
 @Data
 public class TransactionDTO {
 	private Long id;
-	private Double valor;
+	private BigDecimal valor;
     private Long idPagador;
     private Long idRecebedor;
     private String status;

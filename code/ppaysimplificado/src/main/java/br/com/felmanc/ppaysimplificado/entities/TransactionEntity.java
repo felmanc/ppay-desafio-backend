@@ -1,5 +1,6 @@
 package br.com.felmanc.ppaysimplificado.entities;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import br.com.felmanc.ppaysimplificado.enums.TransactionStatus;
@@ -29,7 +30,7 @@ public class TransactionEntity {
     private Long id;
 
     @Column(nullable = false)
-    private Double value;
+    private BigDecimal value;
 
     @ManyToOne
     @JoinColumn(name = "payer_id", nullable = false)

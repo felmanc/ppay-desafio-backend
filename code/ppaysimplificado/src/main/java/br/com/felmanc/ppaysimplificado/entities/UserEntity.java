@@ -1,5 +1,7 @@
 package br.com.felmanc.ppaysimplificado.entities;
 
+import java.math.BigDecimal;
+
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -30,7 +32,7 @@ public class UserEntity {
     private String password;
 
     @Column(nullable = false)
-    private Double balance;
+    private BigDecimal balance;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
