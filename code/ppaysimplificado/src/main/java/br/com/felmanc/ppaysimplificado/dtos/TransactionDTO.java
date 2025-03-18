@@ -6,10 +6,10 @@ import lombok.Data;
 
 @Data
 public class TransactionDTO {
-    private Long id;
-    private Double value;
-    private Long payerId; // ID do pagador
-    private Long payeeId; // ID do recebedor
+	private Long id;
+	private Double valor;
+    private Long idPagador;
+    private Long idRecebedor;
     private String status;
-    private LocalDateTime timestamp;
+    private LocalDateTime data;
 }
