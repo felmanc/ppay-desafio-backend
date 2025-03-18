@@ -16,6 +16,7 @@ import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.enums.TransactionStatus;
+import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
@@ -49,6 +50,12 @@ public class TransactionService {
                     return new IllegalArgumentException("Pagador não encontrado.");
                 });
 
+        if(payer.getType().equals(UserType.MERCHANT))
+        {
+            log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.getIdPagador());
+            throw new IllegalArgumentException("Pagador não pode ser lojista.");
+        }
+        
         UserEntity payee = userRepository.findById(transactionDTO.getIdRecebedor())
                 .orElseThrow(() -> {
                     log.error("Recebedor não encontrado com ID: {}", transactionDTO.getIdRecebedor());
