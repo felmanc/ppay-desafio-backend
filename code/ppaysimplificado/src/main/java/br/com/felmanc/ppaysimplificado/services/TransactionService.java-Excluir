@@ -100,26 +100,12 @@ public class TransactionService {
                     .bodyToMono(String.class)
                     .block();
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode jsonNode = objectMapper.readTree(response);
-
-            String status = jsonNode.path("status").asText();
-            boolean authorization = jsonNode.path("data").path("authorization").asBoolean();
-
-            if ("success".equalsIgnoreCase(status)) {
-                transaction.setStatus(TransactionStatus.AUTHORIZED);
-            } else {
-                transaction.setStatus(TransactionStatus.FAILED);
-            }
-
-            return authorization;
+	        return "AUTHORIZED".equalsIgnoreCase(response);
         } catch (WebClientResponseException e) {
-            if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                throw new UnauthorizedTransactionException("Acesso não autorizado. Verifique suas credenciais.");
-            } else {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado na autorização.", e);
-            }
+	        // Trata erros de resposta HTTP
+	        throw new IllegalStateException("Erro na autorização: " + e.getStatusCode(), e);
         } catch (Exception e) {
+	        // Trata outros erros
             throw new IllegalStateException("Erro inesperado na autorização.", e);
         }
     }

@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
-import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
-import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,28 +19,20 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    private final TransactionMapper transactionMapper;
-
-    public TransactionController(TransactionService transactionService, TransactionMapper transactionMapper) {
-		this.transactionService = transactionService;
-		this.transactionMapper = transactionMapper;
-	}
+    public TransactionController(TransactionService transactionService) {
+        this.transactionService = transactionService;
+    }
 
     @EventListener(ContextRefreshedEvent.class)
     public void checkBean() {
-        log.info("TransactionMapper bean loaded: {}", (transactionMapper != null));
+        log.info("TransactionService bean loaded: {}", (transactionService != null));
     }
 
-	@PostMapping("/transfer")
+    @PostMapping("/transfer")
     public ResponseEntity<TransactionDTO> transfer(@RequestBody TransactionDTO transactionDTO) {
         log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}",
-                transactionDTO.getPayerId(), transactionDTO.getPayeeId(), transactionDTO.getValue());
-        TransactionEntity transactionEntity = transactionService.transfer(
-                transactionDTO.getPayerId(),
-                transactionDTO.getPayeeId(),
-                transactionDTO.getValue()
-        );
-        TransactionDTO response = transactionMapper.toDTO(transactionEntity);
+                transactionDTO.getIdPagador(), transactionDTO.getIdRecebedor(), transactionDTO.getValor());
+        TransactionDTO response = transactionService.transfer(transactionDTO);
         log.info("Transferência realizada com sucesso. ID da Transação: {}", response.getId());
         return ResponseEntity.ok(response);
     }

@@ -8,8 +8,17 @@ import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
+
+    @Mapping(target = "nome", source = "name")
+    @Mapping(target = "senha", source = "password")
+    @Mapping(target = "saldo", source = "balance")
+    @Mapping(target = "tipo", source = "type")
     UserDTO toDTO(UserEntity userEntity);
 
-    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "name", source = "nome")
+    @Mapping(target = "password", source = "senha")
+    @Mapping(target = "balance", source = "saldo")
+    @Mapping(target = "type", source = "tipo")
     UserEntity toEntity(UserDTO userDTO);
 }
