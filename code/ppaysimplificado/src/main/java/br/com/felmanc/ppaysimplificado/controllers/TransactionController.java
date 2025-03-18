@@ -31,9 +31,9 @@ public class TransactionController {
     @PostMapping("/transfer")
     public ResponseEntity<TransactionDTO> transfer(@RequestBody TransactionDTO transactionDTO) {
         log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}",
-                transactionDTO.getIdPagador(), transactionDTO.getIdRecebedor(), transactionDTO.getValor());
+                transactionDTO.idPagador(), transactionDTO.idRecebedor(), transactionDTO.valor());
         TransactionDTO response = transactionService.transfer(transactionDTO);
-        log.info("Transferência realizada com sucesso. ID da Transação: {}", response.getId());
+        log.info("Transferência realizada com sucesso. ID da Transação: {}", response.id());
         return ResponseEntity.ok(response);
     }
 }

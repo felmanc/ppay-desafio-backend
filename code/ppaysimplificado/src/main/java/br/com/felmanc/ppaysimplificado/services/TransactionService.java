@@ -43,79 +43,62 @@ public class TransactionService {
 	}
 
 	@Transactional
-    public TransactionDTO transfer(TransactionDTO transactionDTO) {
-        log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
-                transactionDTO.getValor(), transactionDTO.getIdPagador(), transactionDTO.getIdRecebedor());
+	public TransactionDTO transfer(TransactionDTO transactionDTO) {
+	    log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
+	            transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
 
-        if(transactionDTO.getIdPagador().equals(transactionDTO.getIdRecebedor()))
-        {
-            log.error("Pagador e recebedor não podem ser o mesmo.");
-            throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
-        }
-        
-        UserEntity payer;
-        try {
-        	payer = userService.findUserEntityById(transactionDTO.getIdPagador());
-		} catch (IllegalArgumentException e) {
-			throw new IllegalArgumentException("Pagador não encontrado.");
-		}
+	    if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
+	        log.error("Pagador e recebedor não podem ser o mesmo.");
+	        throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
+	    }
 
-        if(payer.getType().equals(UserType.MERCHANT))
-        {
-            log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.getIdPagador());
-            throw new IllegalArgumentException("Pagador não pode ser lojista.");
-        }
-        
-        UserEntity payee;
-        try {
-        	payee = userService.findUserEntityById(transactionDTO.getIdRecebedor());
-		} catch (IllegalArgumentException e) {
-			throw new IllegalArgumentException("Recebedor não encontrado.");
-		}
+	    UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
+	    if (payer.getType().equals(UserType.MERCHANT)) {
+	        log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.idPagador());
+	        throw new IllegalArgumentException("Pagador não pode ser lojista.");
+	    }
 
-        if (payer.getBalance().compareTo(transactionDTO.getValor()) < 0) {
-            log.error("Saldo insuficiente para o pagador com ID: {}", transactionDTO.getIdPagador());
-            throw new IllegalArgumentException("Saldo insuficiente.");
-        }
+	    UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
+	    if (payer.getBalance().compareTo(transactionDTO.valor()) < 0) {
+	        log.error("Saldo insuficiente para o pagador com ID: {}", transactionDTO.idPagador());
+	        throw new IllegalArgumentException("Saldo insuficiente.");
+	    }
 
-        payer.setBalance(payer.getBalance().subtract(transactionDTO.getValor()));
-        payee.setBalance(payee.getBalance().add(transactionDTO.getValor()));
+	    payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
+	    payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
 
-        if (transactionDTO.getData() == null) {
-            transactionDTO.setData(LocalDateTime.now());
-        }        
-        
-        TransactionEntity transaction = new TransactionEntity();
-        transaction.setValue(transactionDTO.getValor());
-        transaction.setPayer(payer);
-        transaction.setPayee(payee);
-        transaction.setStatus(TransactionStatus.PENDING);
-        transaction.setTimestamp(transactionDTO.getData());
+	    TransactionEntity transaction = new TransactionEntity();
+	    transaction.setValue(transactionDTO.valor());
+	    transaction.setPayer(payer);
+	    transaction.setPayee(payee);
+	    transaction.setStatus(TransactionStatus.PENDING);
 
-        transaction = transactionRepository.save(transaction);
-        
-        try {
-            if (!authorizeTransaction(transaction)) {
-                transaction.setStatus(TransactionStatus.FAILED);
-                throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
-            }			
-		} catch (Exception e) {
-            transaction.setStatus(TransactionStatus.FAILED);
-            throw e;
-		}
+	    transaction.setTimestamp(transactionDTO.data() != null ? transactionDTO.data() : LocalDateTime.now());
 
+	    transaction = transactionRepository.save(transaction);
 
-        log.info("Transação autorizada pelo serviço externo.");
-        transaction.setStatus(TransactionStatus.AUTHORIZED);
-        
-        if(notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: ." + transaction.getId())) {
-            log.info("Notificação efetuada com sucesso.");
-        }
-        
-        transaction.setStatus(TransactionStatus.COMPLETED);
+	    try {
+	        if (!authorizeTransaction(transaction)) {
+	            transaction.setStatus(TransactionStatus.FAILED);
+	            throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
+	        }
+	    } catch (Exception e) {
+	        transaction.setStatus(TransactionStatus.FAILED);
+	        throw e;
+	    }
 
-        return transactionMapper.toDTO(transaction);
-    }
+	    log.info("Transação autorizada pelo serviço externo.");
+	    transaction.setStatus(TransactionStatus.AUTHORIZED);
+
+	    if (notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
+	        log.info("Notificação efetuada com sucesso.");
+	    }
+
+	    transaction.setStatus(TransactionStatus.COMPLETED);
+
+	    return transactionMapper.toDTO(transaction);
+	}
+
 
     public boolean authorizeTransaction(TransactionEntity transaction) {
         try {
