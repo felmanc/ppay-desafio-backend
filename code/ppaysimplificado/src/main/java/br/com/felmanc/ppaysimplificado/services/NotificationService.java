@@ -3,7 +3,6 @@ package br.com.felmanc.ppaysimplificado.services;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.felmanc.ppaysimplificado.dtos.NotificationDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
-import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import reactor.core.publisher.Mono;
 
 @Service
