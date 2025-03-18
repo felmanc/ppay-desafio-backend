@@ -28,7 +28,7 @@ public class UserController {
     public ResponseEntity<UserDTO> createUser(@RequestBody UserDTO userDTO) {
         log.info("Recebida requisição para criar usuário.");
         UserDTO response = userService.createUser(userDTO);
-        log.info("Usuário criado com sucesso: {}", response.getNome());
+        log.info("Usuário criado com sucesso: {}", response.nome());
         return ResponseEntity.ok(response);
     }
 
@@ -48,7 +48,7 @@ public class UserController {
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         log.info("Recebida requisição para buscar o usuário com ID: {}", id);
         UserDTO userDTO = userService.getUserById(id);
-        log.info("Usuário encontrado: {}", userDTO.getNome());
+        log.info("Usuário encontrado: {}", userDTO.nome());
         return ResponseEntity.ok(userDTO);
     }
 }

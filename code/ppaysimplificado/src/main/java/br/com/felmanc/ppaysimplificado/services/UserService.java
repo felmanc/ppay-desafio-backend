@@ -26,7 +26,7 @@ public class UserService {
     }
 
     public UserDTO createUser(UserDTO userDTO) {
-        log.info("Iniciando criação de usuário com CPF: {}", userDTO.getCpf());
+        log.info("Iniciando criação de usuário com CPF: {}", userDTO.cpf());
         UserEntity userEntity = userMapper.toEntity(userDTO);
 
         Optional<UserEntity> existingByCpf = userRepository.findByCpf(userEntity.getCpf());
