@@ -44,9 +44,15 @@ public class TransactionService {
         log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.getValor(), transactionDTO.getIdPagador(), transactionDTO.getIdRecebedor());
 
+        if(transactionDTO.getIdPagador().equals(transactionDTO.getIdRecebedor()))
+        {
+            log.error("Pagador e recebedor não podem ser o mesmo.");
+            throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
+        }
+        
         UserEntity payer = userRepository.findById(transactionDTO.getIdPagador())
                 .orElseThrow(() -> {
-                    log.error("Pagador não encontrado com ID: {}", transactionDTO.getIdPagador());
+                    log.error("Pagador não encontrado com ID: {}.", transactionDTO.getIdPagador());
                     return new IllegalArgumentException("Pagador não encontrado.");
                 });
 
