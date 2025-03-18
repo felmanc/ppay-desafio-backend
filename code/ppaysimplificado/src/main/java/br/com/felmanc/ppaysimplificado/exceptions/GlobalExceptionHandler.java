@@ -11,6 +11,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(UnauthorizedTransactionException.class)
+    public ResponseEntity<Object> handleUnauthorizedTransactionException(UnauthorizedTransactionException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of(
+                        "error", "FORBIDDEN",
+                        "message", ex.getMessage(),
+                        "details", "Transação não autorizada pelo serviço externo."
+                ));
+    }	
+	
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Object> handleMissingRequestParameter(MissingServletRequestParameterException ex) {
         return ResponseEntity
