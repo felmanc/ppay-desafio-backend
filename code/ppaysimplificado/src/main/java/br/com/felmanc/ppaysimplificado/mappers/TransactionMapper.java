@@ -16,10 +16,11 @@ public interface TransactionMapper {
     @Mapping(source = "timestamp", target = "data")
     TransactionDTO toDTO(TransactionEntity transactionEntity);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(source = "idPagador", target = "payer.id")
     @Mapping(source = "idRecebedor", target = "payee.id")
     @Mapping(source = "valor", target = "value")
-    @Mapping(source = "status", target = "status")
-    @Mapping(source = "data", target = "timestamp")
+    @Mapping(source = "status", target = "status", ignore = true)
+    @Mapping(source = "data", target = "timestamp", ignore = true)
     TransactionEntity toEntity(TransactionDTO transactionDTO);
 }
