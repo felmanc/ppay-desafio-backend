@@ -2,6 +2,9 @@ package br.com.felmanc.ppaysimplificado.entities;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import br.com.felmanc.ppaysimplificado.converters.UserTypeDeserializer;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -36,5 +39,6 @@ public class UserEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @JsonDeserialize(using = UserTypeDeserializer.class)
     private UserType type;
 }
