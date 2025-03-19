@@ -1,5 +1,6 @@
 package br.com.felmanc.ppaysimplificado.services;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
@@ -42,65 +43,75 @@ public class TransactionService {
 		this.transactionMapper = transactionMapper;
 	}
 
-	@Transactional
-	public TransactionDTO transfer(TransactionDTO transactionDTO) {
-	    log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
-	            transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
+    @Transactional
+    public TransactionDTO transfer(TransactionDTO transactionDTO) {
+        log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
+                transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
 
-	    if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
-	        log.error("Pagador e recebedor não podem ser o mesmo.");
-	        throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
-	    }
+        validateTransaction(transactionDTO);
 
-	    UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
-	    if (payer.getType().equals(UserType.MERCHANT)) {
-	        log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.idPagador());
-	        throw new IllegalArgumentException("Pagador não pode ser lojista.");
-	    }
+        UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
+        UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
 
-	    UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
-	    if (payer.getBalance().compareTo(transactionDTO.valor()) < 0) {
-	        log.error("Saldo insuficiente para o pagador com ID: {}", transactionDTO.idPagador());
-	        throw new IllegalArgumentException("Saldo insuficiente.");
-	    }
+        payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
+        payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
 
-	    payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
-	    payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
+        TransactionEntity transaction = new TransactionEntity();
+        transaction.setValue(transactionDTO.valor());
+        transaction.setPayer(payer);
+        transaction.setPayee(payee);
+        transaction.setStatus(TransactionStatus.PENDING);
+        transaction.setTimestamp(transactionDTO.data() != null ? transactionDTO.data() : LocalDateTime.now());
 
-	    TransactionEntity transaction = new TransactionEntity();
-	    transaction.setValue(transactionDTO.valor());
-	    transaction.setPayer(payer);
-	    transaction.setPayee(payee);
-	    transaction.setStatus(TransactionStatus.PENDING);
+        transaction = transactionRepository.save(transaction);
 
-	    transaction.setTimestamp(transactionDTO.data() != null ? transactionDTO.data() : LocalDateTime.now());
+        try {
+            if (!authorizeTransaction(transaction)) {
+                transaction.setStatus(TransactionStatus.FAILED);
+                throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
+            }
+        } catch (Exception e) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            throw e;
+        }
 
-	    transaction = transactionRepository.save(transaction);
+        log.info("Transação autorizada pelo serviço externo.");
+        transaction.setStatus(TransactionStatus.AUTHORIZED);
 
-	    try {
-	        if (!authorizeTransaction(transaction)) {
-	            transaction.setStatus(TransactionStatus.FAILED);
-	            throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
-	        }
-	    } catch (Exception e) {
-	        transaction.setStatus(TransactionStatus.FAILED);
-	        throw e;
-	    }
+        if (notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
+            log.info("Notificação efetuada com sucesso.");
+        }
 
-	    log.info("Transação autorizada pelo serviço externo.");
-	    transaction.setStatus(TransactionStatus.AUTHORIZED);
+        transaction.setStatus(TransactionStatus.COMPLETED);
 
-	    if (notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
-	        log.info("Notificação efetuada com sucesso.");
-	    }
+        return transactionMapper.toDTO(transaction);
+    }
 
-	    transaction.setStatus(TransactionStatus.COMPLETED);
+    private void validateTransaction(TransactionDTO transactionDTO) {
 
-	    return transactionMapper.toDTO(transaction);
-	}
+        if (transactionDTO.valor() == null || transactionDTO.valor().compareTo(BigDecimal.ZERO) <= 0) {
+            log.error("Valor da transação deve ser maior que zero. Valor recebido: {}", transactionDTO.valor());
+            throw new IllegalArgumentException("O valor da transação deve ser maior que zero.");
+        }
+        
+    	if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
+            log.error("Pagador e recebedor não podem ser o mesmo.");
+            throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
+        }
 
+        UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
+        if (payer.getType().equals(UserType.MERCHANT)) {
+            log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.idPagador());
+            throw new IllegalArgumentException("Pagador não pode ser lojista.");
+        }
 
-    public boolean authorizeTransaction(TransactionEntity transaction) {
+        if (payer.getBalance().compareTo(transactionDTO.valor()) < 0) {
+            log.error("Saldo insuficiente para o pagador com ID: {}", transactionDTO.idPagador());
+            throw new IllegalArgumentException("Saldo insuficiente.");
+        }
+    }
+
+    private boolean authorizeTransaction(TransactionEntity transaction) {
         try {
             String response = webClient
                     .get()
