@@ -25,28 +25,40 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
-    public UserDTO createUser(UserDTO userDTO) {
-        log.info("Iniciando criação de usuário com CPF: {}", userDTO.cpf());
+    public UserEntity validateUser(UserDTO userDTO) {
+        if (userDTO.tipo() == null) {
+            throw new IllegalArgumentException("O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
+        }
+
+        if (userDTO.cpf() == null || !userDTO.cpf().matches("\\d{11}|\\d{14}")) {
+            throw new IllegalArgumentException("O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos, somente números.");
+        }
+
+        if (userDTO.email() == null || !userDTO.email().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            throw new IllegalArgumentException("O e-mail deve estar em um formato válido.");
+        }
+
         UserEntity userEntity = userMapper.toEntity(userDTO);
 
         Optional<UserEntity> existingByCpf = userRepository.findByCpf(userEntity.getCpf());
         if (existingByCpf.isPresent()) {
-            log.warn("Tentativa de criar usuário com CPF duplicado: {}", userEntity.getCpf());
             throw new IllegalArgumentException("Já existe um usuário com este CPF.");
         }
 
         Optional<UserEntity> existingByEmail = userRepository.findByEmail(userEntity.getEmail());
         if (existingByEmail.isPresent()) {
-            log.warn("Tentativa de criar usuário com e-mail duplicado: {}", userEntity.getEmail());
             throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
         }
 
+        return userEntity;
+    }
+    
+    public UserDTO createUser(UserDTO userDTO) {
+        log.info("Iniciando criação de usuário com CPF: {}", userDTO.cpf());
+        UserEntity userEntity = validateUser(userDTO);
+        
         userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(new BigDecimal("0.0")));
         
-        if (userEntity.getType() == null) {
-            throw new IllegalArgumentException("O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
-        }
-
         UserEntity savedUser = userRepository.save(userEntity);
         log.info("Usuário criado com sucesso: {}", savedUser.getId());
         return userMapper.toDTO(savedUser);
