@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
+import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -25,18 +26,32 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
-    public UserEntity validateUser(UserDTO userDTO) {
-        if (userDTO.tipo() == null) {
-            throw new IllegalArgumentException("O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
+    private void campoObrigatorio(Object campo, String mensagem) {
+        if (campo == null) {
+            throw new IllegalArgumentException(mensagem);
         }
+    }
 
-        if (userDTO.cpf() == null || !userDTO.cpf().matches("\\d{11}|\\d{14}")) {
-            throw new IllegalArgumentException("O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos, somente números.");
+    private void campoFormato(String campo, String formato, String mensagem) {
+        if (!campo.matches(formato)) {
+            throw new IllegalArgumentException(mensagem);
         }
-
-        if (userDTO.email() == null || !userDTO.email().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            throw new IllegalArgumentException("O e-mail deve estar em um formato válido.");
-        }
+    }    
+    
+    private UserEntity validateUser(UserDTO userDTO) {
+    	
+    	campoObrigatorio(userDTO.nome(), "O nome do usuário é obrigatório.");    	
+    	campoObrigatorio(userDTO.cpf(), "O CPF/ CNPJ é obrigatório.");    	
+    	campoObrigatorio(userDTO.email(), "O e-mail é obrigatório.");    	
+    	campoObrigatorio(userDTO.senha(), "A senha é obrigatória.");    	
+    	campoObrigatorio(userDTO.tipo(), "O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
+    	
+    	campoFormato(userDTO.cpf(),
+    			"\\d{11}|\\d{14}",
+    			"O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos e somente números.");
+    	campoFormato(userDTO.email(),
+    			"^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$",
+    			"O e-mail deve estar em um formato válido.");
 
         UserEntity userEntity = userMapper.toEntity(userDTO);
 
