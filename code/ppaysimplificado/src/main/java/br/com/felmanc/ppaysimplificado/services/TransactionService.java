@@ -2,6 +2,8 @@ package br.com.felmanc.ppaysimplificado.services;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -138,5 +140,14 @@ public class TransactionService {
         } catch (Exception e) {
             throw new IllegalStateException("Erro inesperado na autorização.", e);
         }
+    }
+    
+    public List<TransactionDTO> getAllTransactions() {
+        log.info("Buscando todas as transações");
+        List<TransactionEntity> transactionEntities = transactionRepository.findAll();
+        log.info("Número de usuários encontrados: {}", transactionEntities.size());
+        return transactionEntities.stream()
+                .map(transactionMapper::toDTO)
+                .collect(Collectors.toList());
     }
 }
