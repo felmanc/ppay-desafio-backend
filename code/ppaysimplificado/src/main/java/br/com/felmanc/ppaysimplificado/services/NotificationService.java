@@ -1,5 +1,7 @@
 package br.com.felmanc.ppaysimplificado.services;
 
+import javax.management.remote.NotificationResult;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -10,9 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.felmanc.ppaysimplificado.dtos.NotificationDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class NotificationService {
 
     public boolean sendNotification(UserEntity user, String message) {
@@ -67,6 +71,7 @@ public class NotificationService {
             throw new IllegalStateException("Erro inesperado ao processar a notificação.", e);
         }*/
         } catch (Exception e) {
+            log.error("Erro ao enviar notificação", e);
             return false;
         }
     }
