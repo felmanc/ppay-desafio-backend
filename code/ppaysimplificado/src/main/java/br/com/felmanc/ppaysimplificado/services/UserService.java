@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
-import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
