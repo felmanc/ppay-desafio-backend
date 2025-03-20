@@ -15,7 +15,7 @@ import br.com.felmanc.ppaysimplificado.services.UserService;
 import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/user")
 public class UserController {
 
     private final UserService userService;

@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/transactions")
+@RequestMapping("/transfer")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -25,15 +25,15 @@ public class TransactionController {
 
     @EventListener(ContextRefreshedEvent.class)
     public void checkBean() {
-        log.info("TransactionService bean loaded: {}", (transactionService != null));
+        log.info("TransactionService bean loaded: {}.", (transactionService != null));
     }
 
-    @PostMapping("/transfer")
+    @PostMapping
     public ResponseEntity<TransactionDTO> transfer(@RequestBody TransactionDTO transactionDTO) {
-        log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}",
+        log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}.",
                 transactionDTO.idPagador(), transactionDTO.idRecebedor(), transactionDTO.valor());
-        TransactionDTO response = transactionService.transfer(transactionDTO);
-        log.info("Transferência realizada com sucesso. ID da Transação: {}", response.id());
+        TransactionDTO response = transactionService.createTransaction(transactionDTO);
+        log.info("Transferência realizada com sucesso. ID da Transação: {}.", response.id());
         return ResponseEntity.ok(response);
     }
-}
+    }

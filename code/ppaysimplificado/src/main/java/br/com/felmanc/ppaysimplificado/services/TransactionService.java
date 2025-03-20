@@ -44,7 +44,7 @@ public class TransactionService {
 	}
 
     @Transactional
-    public TransactionDTO transfer(TransactionDTO transactionDTO) {
+    public TransactionDTO createTransaction(TransactionDTO transactionDTO) {
         log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
 

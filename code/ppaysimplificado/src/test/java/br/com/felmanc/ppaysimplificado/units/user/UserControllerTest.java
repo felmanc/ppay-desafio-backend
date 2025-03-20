@@ -45,7 +45,7 @@ public class UserControllerTest {
         UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
         when(userService.createUser(Mockito.any(UserDTO.class))).thenReturn(userDTO);
 
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/user")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ public class UserControllerTest {
     public void testGetAllUsers_NoUsersFound() throws Exception {
         when(userService.getAllUsers()).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/users"))
+        mockMvc.perform(get("/user"))
                 .andExpect(status().isNoContent());
     }
 
@@ -69,7 +69,7 @@ public class UserControllerTest {
         );
         when(userService.getAllUsers()).thenReturn(users);
 
-        mockMvc.perform(get("/users"))
+        mockMvc.perform(get("/user"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].nome").value("John Doe"))
@@ -81,7 +81,7 @@ public class UserControllerTest {
         UserDTO userDTO = new UserDTO(1L, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
         when(userService.getUserById(1L)).thenReturn(userDTO);
 
-        mockMvc.perform(get("/users/1"))
+        mockMvc.perform(get("/user/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value("John Doe"))
                 .andExpect(jsonPath("$.id").value(1));
