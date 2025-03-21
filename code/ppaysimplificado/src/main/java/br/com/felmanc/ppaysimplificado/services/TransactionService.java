@@ -4,16 +4,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import org.springframework.web.server.ResponseStatusException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
+import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
@@ -30,21 +25,21 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserService userService;
-    private final NotificationService notificationService; 
-    private final WebClient webClient;
+    private final NotificationClientImpl notificationClientImpl; 
     private final TransactionMapper transactionMapper;
+    private final AuthorizationClient authorizationClient;
 
-
-    public TransactionService(TransactionRepository transactionRepository, UserService userService,
-			NotificationService notificationService, WebClient webClient, TransactionMapper transactionMapper) {
+	public TransactionService(TransactionRepository transactionRepository, UserService userService,
+			NotificationClientImpl notificationClientImpl, TransactionMapper transactionMapper,
+			AuthorizationClient authorizationClient) {
 		this.transactionRepository = transactionRepository;
 		this.userService = userService;
-		this.notificationService = notificationService;
-		this.webClient = webClient;
+		this.notificationClientImpl = notificationClientImpl;
 		this.transactionMapper = transactionMapper;
+		this.authorizationClient = authorizationClient;
 	}
 
-    @Transactional
+	@Transactional
     public TransactionDTO createTransaction(TransactionDTO transactionDTO) {
         log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
@@ -79,7 +74,7 @@ public class TransactionService {
         log.info("Transação autorizada pelo serviço externo.");
         transaction.setStatus(TransactionStatus.AUTHORIZED);
 
-        if (notificationService.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
+        if (notificationClientImpl.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
             log.info("Notificação efetuada com sucesso.");
         }
 
@@ -112,33 +107,8 @@ public class TransactionService {
         }
     }
 
-    private boolean authorizeTransaction(TransactionEntity transaction) {
-        try {
-            String response = webClient
-                    .get()
-                    .uri("https://util.devi.tools/api/v2/authorize")
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode jsonNode = objectMapper.readTree(response);
-
-            String status = jsonNode.path("status").asText();
-
-            boolean authorization = jsonNode.path("data").path("authorization").asBoolean();
-
-
-            return "success".equalsIgnoreCase(status) && authorization;
-        } catch (WebClientResponseException e) {
-            if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                throw new UnauthorizedTransactionException("Acesso não autorizado. Verifique suas credenciais.");
-            } else {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado na autorização.", e);
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Erro inesperado na autorização.", e);
-        }
+    public boolean authorizeTransaction(TransactionEntity transaction) {
+        return authorizationClient.authorizeTransaction();
     }
     
     public List<TransactionDTO> getAllTransactions() {

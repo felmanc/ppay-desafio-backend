@@ -1,7 +1,7 @@
-package br.com.felmanc.ppaysimplificado.services;
+package br.com.felmanc.ppaysimplificado.clients;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -13,11 +13,13 @@ import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
-@Service
 @Slf4j
-public class NotificationService {
+@Component
+public class NotificationClientImpl implements NotificationClient {
 
+    @Override
     public boolean sendNotification(UserEntity user, String message) {
+
         try {
             NotificationDTO notification = new NotificationDTO(user.getEmail(), message);
 
