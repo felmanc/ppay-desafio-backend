@@ -1,5 +1,7 @@
 package br.com.felmanc.ppaysimplificado.mappers;
 
+import java.util.List;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -23,4 +25,6 @@ public interface TransactionMapper {
     @Mapping(source = "status", target = "status", ignore = true)
     @Mapping(source = "data", target = "timestamp", ignore = true)
     TransactionEntity toEntity(TransactionDTO transactionDTO);
+    
+    List<TransactionDTO> toDTOList(List<TransactionEntity> transactionEntities);
 }
