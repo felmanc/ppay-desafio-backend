@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 
-@Mapper(componentModel = "spring", imports = java.time.format.DateTimeFormatter.class)
+@Mapper(componentModel = "spring")
 public interface TransactionMapper {
 
     @Mapping(source = "payer.id", target = "idPagador")
