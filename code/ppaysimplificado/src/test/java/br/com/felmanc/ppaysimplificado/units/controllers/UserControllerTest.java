@@ -1,4 +1,4 @@
-package br.com.felmanc.ppaysimplificado.units.user;
+package br.com.felmanc.ppaysimplificado.units.controllers;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

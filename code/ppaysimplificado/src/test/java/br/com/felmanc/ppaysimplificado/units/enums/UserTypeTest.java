@@ -1,4 +1,4 @@
-package br.com.felmanc.ppaysimplificado.units.user;
+package br.com.felmanc.ppaysimplificado.units.enums;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
