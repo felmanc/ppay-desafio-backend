@@ -38,12 +38,12 @@ public class AuthorizationClientImpl implements AuthorizationClient {
             return "success".equalsIgnoreCase(status) && authorization;
         } catch (WebClientResponseException e) {
             if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                throw new UnauthorizedTransactionException("Acesso não autorizado. Verifique suas credenciais.");
+                throw new UnauthorizedTransactionException("Transação não autorizada.");
             } else {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado na autorização.", e);
             }
         } catch (Exception e) {
-            throw new IllegalStateException("Erro inesperado na autorização.", e);
+            throw new IllegalStateException("Erro inesperado na autorização.");
         }
     }
 }
