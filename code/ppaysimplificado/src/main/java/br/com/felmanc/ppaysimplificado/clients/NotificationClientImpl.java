@@ -17,33 +17,39 @@ import reactor.core.publisher.Mono;
 @Component
 public class NotificationClientImpl implements NotificationClient {
 
+    private final WebClient webClient;
+
+    public NotificationClientImpl(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("https://util.devi.tools/api/v1").build();
+    }
+
     @Override
     public boolean sendNotification(UserEntity user, String message) {
-
         try {
             NotificationDTO notification = new NotificationDTO(user.getEmail(), message);
 
-            String response = WebClient.create()
-                .post()
-                .uri("https://util.devi.tools/api/v1/notify")
+            String response = webClient.post()
+                .uri("/notify")
                 .bodyValue(notification)
                 .retrieve()
                 .onStatus(
-        	    status -> status.is4xxClientError() || status.is5xxServerError(),
-        	    clientResponse -> {
-        	        if (clientResponse.statusCode().equals(HttpStatus.INTERNAL_SERVER_ERROR)) {
-        	            return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro no servidor."));
-        	        } else if (clientResponse.statusCode().equals(HttpStatus.GATEWAY_TIMEOUT)) {
-        	            return Mono.error(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Timeout do gateway."));
-        	        } else {
-        	            return clientResponse.createException();
-        	        }
-                })
+                    status -> status.is4xxClientError() || status.is5xxServerError(),
+                    clientResponse -> {
+                        if (clientResponse.statusCode().equals(HttpStatus.INTERNAL_SERVER_ERROR)) {
+                            return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro no servidor."));
+                        } else if (clientResponse.statusCode().equals(HttpStatus.GATEWAY_TIMEOUT)) {
+                            return Mono.error(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Timeout do gateway."));
+                        } else {
+                            return clientResponse.createException();
+                        }
+                    })
                 .bodyToMono(String.class)
                 .block();
 
+            log.info("Response: {}", response);
+
             if (response == null && HttpStatus.NO_CONTENT.value() == 204) {
-                System.out.println("Notificação enviada com sucesso (204 - No Content).");
+                log.info("Notificação enviada com sucesso (204 - No Content).");
                 return true;
             }
 
@@ -51,25 +57,13 @@ public class NotificationClientImpl implements NotificationClient {
             JsonNode jsonNode = objectMapper.readTree(response);
 
             String status = jsonNode.path("status").asText();
+            log.info("Status: {}", status);
 
             if ("success".equalsIgnoreCase(status)) {
                 return true;
             } else {
                 return false;
             }
-        /*} catch (WebClientResponseException e) {
-            if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                throw new UnauthorizedTransactionException("Acesso não autorizado. Verifique suas credenciais.");
-            } else if (e.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro no servidor.", e);
-            } else if (e.getStatusCode() == HttpStatus.GATEWAY_TIMEOUT) {
-                throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Timeout do gateway.", e);
-            } else {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado.", e);
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Erro inesperado ao processar a notificação.", e);
-        }*/
         } catch (Exception e) {
             log.error("Erro ao enviar notificação", e);
             return false;
