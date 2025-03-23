@@ -16,15 +16,15 @@ public class AuthorizationClientImpl implements AuthorizationClient {
 
     private final WebClient webClient;
 
-    public AuthorizationClientImpl(WebClient webClient) {
-        this.webClient = webClient;
+    public AuthorizationClientImpl(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.baseUrl("https://util.devi.tools").build();
     }
 
     @Override
     public boolean authorizeTransaction() {
         try {
             String response = webClient.get()
-                .uri("https://util.devi.tools/api/v2/authorize")
+                .uri("/api/v2/authorize")
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
@@ -41,7 +41,7 @@ public class AuthorizationClientImpl implements AuthorizationClient {
                 throw new UnauthorizedTransactionException("Transação não autorizada.");
             } else {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro inesperado na autorização.", e);
-            }
+    }
         } catch (Exception e) {
             throw new IllegalStateException("Erro inesperado na autorização.");
         }
