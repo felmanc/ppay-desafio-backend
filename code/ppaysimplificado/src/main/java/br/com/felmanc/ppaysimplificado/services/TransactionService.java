@@ -44,10 +44,13 @@ public class TransactionService {
         log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
 
-        validateTransaction(transactionDTO);
-
         UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
+        log.info("Retornado pagador: {}", payer);
+
         UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
+        log.info("Retornado recebedor: {}", payee);
+
+        validateTransaction(transactionDTO, payer, payee);
 
         payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
         payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
@@ -83,19 +86,32 @@ public class TransactionService {
         return transactionMapper.toDTO(transaction);
     }
 
-    private void validateTransaction(TransactionDTO transactionDTO) {
+    protected void validateTransaction(TransactionDTO transactionDTO, UserEntity payer, UserEntity payee) {
+        if (transactionDTO == null) {
+            log.error("O objeto TransactionDTO é nulo.");
+            throw new IllegalArgumentException("O objeto TransactionDTO não pode ser nulo.");
+        }
 
         if (transactionDTO.valor() == null || transactionDTO.valor().compareTo(BigDecimal.ZERO) <= 0) {
             log.error("Valor da transação deve ser maior que zero. Valor recebido: {}", transactionDTO.valor());
             throw new IllegalArgumentException("O valor da transação deve ser maior que zero.");
         }
         
-    	if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
+        if (payer == null) {
+            log.error("Pagador não encontrado. ID: {}", transactionDTO.idPagador());
+            throw new IllegalArgumentException("Pagador não encontrado.");
+        }
+
+        if (payee == null) {
+            log.error("Recebedor não encontrado. ID: {}", transactionDTO.idRecebedor());
+            throw new IllegalArgumentException("Recebedor não encontrado.");
+        }
+
+        if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
             log.error("Pagador e recebedor não podem ser o mesmo.");
             throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
         }
 
-        UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
         if (payer.getType().equals(UserType.MERCHANT)) {
             log.error("Pagador não pode ser lojista. ID: {}", transactionDTO.idPagador());
             throw new IllegalArgumentException("Pagador não pode ser lojista.");
