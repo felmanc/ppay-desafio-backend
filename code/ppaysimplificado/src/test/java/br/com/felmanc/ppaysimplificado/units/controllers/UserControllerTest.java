@@ -1,6 +1,6 @@
 package br.com.felmanc.ppaysimplificado.units.controllers;
 
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,26 +15,33 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.felmanc.ppaysimplificado.configs.TestConfig;
 import br.com.felmanc.ppaysimplificado.controllers.UserController;
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
+import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
+import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 
 @WebMvcTest(UserController.class)
-@Import(TestConfig.class) // Importando configuração de mock
 public class UserControllerTest {
 
+    @MockitoBean
+    private TransactionRepository transactionRepository;
+    
+    @MockitoBean
+    private TransactionService transactionService;
+    
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+    @MockitoSpyBean
     private UserService userService;
 
     @Autowired
@@ -43,7 +50,7 @@ public class UserControllerTest {
     @Test
     public void testCreateUser() throws Exception {
         UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
-        when(userService.createUser(Mockito.any(UserDTO.class))).thenReturn(userDTO);
+        Mockito.doReturn(userDTO).when(userService).createUser(Mockito.any(UserDTO.class));
 
         mockMvc.perform(post("/user")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -55,7 +62,7 @@ public class UserControllerTest {
 
     @Test
     public void testGetAllUsers_NoUsersFound() throws Exception {
-        when(userService.getAllUsers()).thenReturn(Collections.emptyList());
+        Mockito.doReturn(Collections.emptyList()).when(userService).getAllUsers();
 
         mockMvc.perform(get("/user"))
                 .andExpect(status().isNoContent());
@@ -67,7 +74,7 @@ public class UserControllerTest {
                 new UserDTO(1L, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON),
                 new UserDTO(2L, "Jane Doe", "98765432100", "jane@example.com", "password", BigDecimal.ZERO, UserType.MERCHANT)
         );
-        when(userService.getAllUsers()).thenReturn(users);
+        Mockito.doReturn(users).when(userService).getAllUsers();
 
         mockMvc.perform(get("/user"))
                 .andExpect(status().isOk())
@@ -79,11 +86,20 @@ public class UserControllerTest {
     @Test
     public void testGetUserById() throws Exception {
         UserDTO userDTO = new UserDTO(1L, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
-        when(userService.getUserById(1L)).thenReturn(userDTO);
+        Mockito.doReturn(userDTO).when(userService).getUserById(1L);
 
         mockMvc.perform(get("/user/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value("John Doe"))
                 .andExpect(jsonPath("$.id").value(1));
+    }
+    
+    @Test
+    public void testMockBehavior() {
+        UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
+        Mockito.doReturn(userDTO).when(userService).createUser(Mockito.any(UserDTO.class));
+
+        UserDTO result = userService.createUser(new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON));
+        assertEquals("John Doe", result.nome());
     }
 }
