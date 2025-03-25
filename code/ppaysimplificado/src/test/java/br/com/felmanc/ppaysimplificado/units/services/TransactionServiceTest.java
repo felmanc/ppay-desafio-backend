@@ -1,5 +1,6 @@
 package br.com.felmanc.ppaysimplificado.units.services;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,13 +12,14 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,7 +65,70 @@ class TransactionServiceTest {
         return user;
     }
 
+    private TransactionEntity createTransaction(Long id, UserEntity payer, UserEntity payee, BigDecimal value, TransactionStatus status) {
+        TransactionEntity transaction = new TransactionEntity();
+        transaction.setId(id);
+        transaction.setPayer(payer);
+        transaction.setPayee(payee);
+        transaction.setValue(value);
+        transaction.setStatus(status);
+        transaction.setTimestamp(LocalDateTime.now());
+        return transaction;
+    }
     
+    @Test
+    void testGetAllTransactions() {
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
+        TransactionEntity transaction = createTransaction(1L, payer, payee, new BigDecimal("100.00"), TransactionStatus.PENDING);
+
+        List<TransactionEntity> transactions = Arrays.asList(transaction);
+        when(transactionRepository.findAll()).thenReturn(transactions);
+        when(transactionMapper.toDTOList(transactions)).thenAnswer(invocation -> {
+            List<TransactionEntity> trans = invocation.getArgument(0);
+            return trans.stream()
+                .map(tr -> new TransactionDTO(tr.getId(), tr.getPayer().getId(), tr.getPayee().getId(), tr.getValue(), tr.getStatus().name(), tr.getTimestamp()))
+                .toList();
+        });
+
+        List<TransactionDTO> result = transactionService.getAllTransactions();
+        assertEquals(1, result.size());
+        assertEquals(transaction.getId(), result.get(0).id());
+    }
+
+    @Test
+    void testGetAllTransactionsEmpty() {
+        when(transactionRepository.findAll()).thenReturn(Arrays.asList());
+
+        List<TransactionDTO> result = transactionService.getAllTransactions();
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void testGetAllTransactionsMultiple() {
+        UserEntity payer1 = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee1 = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
+        TransactionEntity transaction1 = createTransaction(1L, payer1, payee1, new BigDecimal("100.00"), TransactionStatus.PENDING);
+
+        UserEntity payer2 = createUserEntity(3L, new BigDecimal("300.00"), UserType.COMMON);
+        UserEntity payee2 = createUserEntity(4L, new BigDecimal("150.00"), UserType.COMMON);
+        TransactionEntity transaction2 = createTransaction(2L, payer2, payee2, new BigDecimal("200.00"), TransactionStatus.PENDING);
+
+        List<TransactionEntity> transactions = Arrays.asList(transaction1, transaction2);
+        when(transactionRepository.findAll()).thenReturn(transactions);
+        when(transactionMapper.toDTOList(transactions)).thenAnswer(invocation -> {
+            List<TransactionEntity> trans = invocation.getArgument(0);
+            return trans.stream()
+                .map(tr -> new TransactionDTO(tr.getId(), tr.getPayer().getId(), tr.getPayee().getId(), tr.getValue(), tr.getStatus().name(), tr.getTimestamp()))
+                .toList();
+        });
+
+        List<TransactionDTO> result = transactionService.getAllTransactions();
+        assertEquals(2, result.size());
+        assertEquals(transaction1.getId(), result.get(0).id());
+        assertEquals(transaction2.getId(), result.get(1).id());
+    }    
+
     @Test
     void testCreateTransactionSuccess() {
         // Dados de entrada
@@ -81,7 +146,7 @@ class TransactionServiceTest {
         when(transactionMapper.toDTO(any(TransactionEntity.class))).thenReturn(transactionDTO);
 
         // Execução
-        TransactionDTO result = transactionService.createTransaction(transactionDTO);
+        TransactionDTO result = assertDoesNotThrow(() -> transactionService.createTransaction(transactionDTO));
 
         // Verificações
         assertNotNull(result);
@@ -141,5 +206,31 @@ class TransactionServiceTest {
 
         assertEquals(new BigDecimal("200.00"), payer.getBalance());
         assertEquals(new BigDecimal("50.00"), payee.getBalance());
+    }
+
+    @Test
+    void testCreateTransactionInvalidValue() {
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
+        TransactionDTO transactionDTO = new TransactionDTO(1L, payer.getId(), payee.getId(), new BigDecimal("0.00"), TransactionStatus.PENDING.name(), null);
+        
+        Mockito.doReturn(payer).when(userService).findUserEntityById(payer.getId());
+        Mockito.doReturn(payee).when(userService).findUserEntityById(payee.getId());
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            transactionService.createTransaction(transactionDTO);
+        });
+    }
+
+    @Test
+    void testCreateTransactionSamePayerAndPayee() {
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        TransactionDTO transactionDTO = new TransactionDTO(1L, payer.getId(), payer.getId(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
+        
+        Mockito.doReturn(payer).when(userService).findUserEntityById(payer.getId());
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            transactionService.createTransaction(transactionDTO);
+        });
     }
 }
