@@ -21,8 +21,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
+import br.com.felmanc.ppaysimplificado.clients.AuthorizationClientImpl;
 import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
@@ -32,6 +34,7 @@ import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
+import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 
@@ -53,6 +56,15 @@ class TransactionServiceTest {
     @Mock
     private AuthorizationClient authorizationClient;
 
+    @Mock
+    private AuthorizationClientImpl authorizationClientImpl;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private WebClient.Builder webClientBuilder;
+    
     @InjectMocks
     private TransactionService transactionService;
     
@@ -74,7 +86,7 @@ class TransactionServiceTest {
         transaction.setTimestamp(LocalDateTime.now());
         return transaction;
     }
-    
+
     @Test
     void testGetAllTransactions() {
         UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
@@ -140,7 +152,7 @@ class TransactionServiceTest {
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(i -> i.getArguments()[0]);
-        when(authorizationClient.authorizeTransaction()).thenReturn(true);
+        when(authorizationClientImpl.authorizeTransaction()).thenReturn(true);
         when(notificationClientImpl.sendNotification(any(UserEntity.class), anyString())).thenReturn(true);
         when(transactionMapper.toDTO(any(TransactionEntity.class))).thenReturn(transactionDTO);
 
@@ -154,6 +166,7 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("150.00"), payee.getBalance());
         verify(transactionRepository, times(1)).save(any(TransactionEntity.class));
         verify(notificationClientImpl, times(1)).sendNotification(any(UserEntity.class), anyString());
+        verify(authorizationClientImpl).authorizeTransaction();
     }
 
     @Test
@@ -169,7 +182,7 @@ class TransactionServiceTest {
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(i -> i.getArguments()[0]);
-        when(authorizationClient.authorizeTransaction()).thenReturn(false);
+        when(authorizationClientImpl.authorizeTransaction()).thenReturn(false);
 
         // Execução e Verificação
         Exception exception = assertThrows(UnauthorizedTransactionException.class, () -> {
