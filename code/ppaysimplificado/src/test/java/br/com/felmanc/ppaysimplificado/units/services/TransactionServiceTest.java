@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +52,7 @@ class TransactionServiceTest {
     
     @Mock
     private AuthorizationClient authorizationClient;
-    
+
     @InjectMocks
     private TransactionService transactionService;
     
@@ -128,7 +127,7 @@ class TransactionServiceTest {
         assertEquals(transaction1.getId(), result.get(0).id());
         assertEquals(transaction2.getId(), result.get(1).id());
     }    
-
+    
     @Test
     void testCreateTransactionSuccess() {
         // Dados de entrada
@@ -210,27 +209,43 @@ class TransactionServiceTest {
 
     @Test
     void testCreateTransactionInvalidValue() {
-        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
-        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
-        TransactionDTO transactionDTO = new TransactionDTO(1L, payer.getId(), payee.getId(), new BigDecimal("0.00"), TransactionStatus.PENDING.name(), null);
-        
-        Mockito.doReturn(payer).when(userService).findUserEntityById(payer.getId());
-        Mockito.doReturn(payee).when(userService).findUserEntityById(payee.getId());
+        // Dados de entrada
+        TransactionDTO transactionDTO = new TransactionDTO(null, 1L, 2L, BigDecimal.ZERO, null, LocalDateTime.now());
+        UserEntity payer = new UserEntity(1L, "Payer", "12345678900", "payer@example.com", "password", BigDecimal.valueOf(200), UserType.COMMON);
+        UserEntity payee = new UserEntity(2L, "Payee", "09876543211", "payee@example.com", "password", BigDecimal.valueOf(50), UserType.COMMON);
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        // Mocking
+        when(userService.findUserEntityById(1L)).thenReturn(payer);
+        when(userService.findUserEntityById(2L)).thenReturn(payee);
+
+        // Execução e Verificação
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             transactionService.createTransaction(transactionDTO);
         });
+
+        String expectedMessage = "O valor da transação deve ser maior que zero.";
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
     void testCreateTransactionSamePayerAndPayee() {
-        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
-        TransactionDTO transactionDTO = new TransactionDTO(1L, payer.getId(), payer.getId(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
-        
-        Mockito.doReturn(payer).when(userService).findUserEntityById(payer.getId());
+        // Dados de entrada
+        TransactionDTO transactionDTO = new TransactionDTO(null, 1L, 1L, BigDecimal.TEN, null, LocalDateTime.now());
+        UserEntity payer = new UserEntity(1L, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.valueOf(200), UserType.COMMON);
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        // Mocking
+        when(userService.findUserEntityById(1L)).thenReturn(payer);
+
+        // Execução e Verificação
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             transactionService.createTransaction(transactionDTO);
         });
+
+        String expectedMessage = "Pagador e recebedor não podem ser o mesmo.";
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 }
