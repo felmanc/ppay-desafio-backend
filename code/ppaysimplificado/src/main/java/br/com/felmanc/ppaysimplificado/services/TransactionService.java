@@ -40,51 +40,56 @@ public class TransactionService {
 	}
 
 	@Transactional
-    public TransactionDTO createTransaction(TransactionDTO transactionDTO) {
-        log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
-                transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
+	public TransactionDTO createTransaction(TransactionDTO transactionDTO) {
+	    log.info("Iniciando transferência de {} do usuário {} para o usuário {}",
+	            transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
 
-        UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
-        log.info("Retornado pagador: {}", payer);
+	    UserEntity payer = userService.findUserEntityById(transactionDTO.idPagador());
+	    log.info("Retornado pagador: {}, Saldo inicial: {}", payer.getId(), payer.getBalance());
 
-        UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
-        log.info("Retornado recebedor: {}", payee);
+	    UserEntity payee = userService.findUserEntityById(transactionDTO.idRecebedor());
+	    log.info("Retornado recebedor: {}, Saldo inicial: {}", payee.getId(), payee.getBalance());
 
-        validateTransaction(transactionDTO, payer, payee);
+	    validateTransaction(transactionDTO, payer, payee);
 
-        payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
-        payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
+	    payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
+	    payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
 
-        TransactionEntity transaction = new TransactionEntity();
-        transaction.setValue(transactionDTO.valor());
-        transaction.setPayer(payer);
-        transaction.setPayee(payee);
-        transaction.setStatus(TransactionStatus.PENDING);
-        transaction.setTimestamp(transactionDTO.data() != null ? transactionDTO.data() : LocalDateTime.now());
+	    log.info("Saldo após débito do pagador: {}", payer.getBalance());
+	    log.info("Saldo após crédito do recebedor: {}", payee.getBalance());
 
-        transaction = transactionRepository.save(transaction);
+	    TransactionEntity transaction = new TransactionEntity();
+	    transaction.setValue(transactionDTO.valor());
+	    transaction.setPayer(payer);
+	    transaction.setPayee(payee);
+	    transaction.setStatus(TransactionStatus.PENDING);
+	    transaction.setTimestamp(transactionDTO.data() != null ? transactionDTO.data() : LocalDateTime.now());
 
-        try {
-            if (!authorizeTransaction(transaction)) {
-                transaction.setStatus(TransactionStatus.FAILED);
-                throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
-            }
-        } catch (Exception e) {
-            transaction.setStatus(TransactionStatus.FAILED);
-            throw e;
-        }
+	    transaction = transactionRepository.save(transaction);
 
-        log.info("Transação autorizada pelo serviço externo.");
-        transaction.setStatus(TransactionStatus.AUTHORIZED);
+	    try {
+	        if (!authorizeTransaction(transaction)) {
+	            log.info("Autorização falhou, lançando exceção...");
+	            transaction.setStatus(TransactionStatus.FAILED);
+	            throw new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo.");
+	        }
+	    } catch (Exception e) {
+	        log.info("Capturando exceção: {}", e.getMessage());
+	        transaction.setStatus(TransactionStatus.FAILED);
+	        throw e;
+	    }
 
-        if (notificationClientImpl.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
-            log.info("Notificação efetuada com sucesso.");
-        }
+	    log.info("Transação autorizada pelo serviço externo.");
+	    transaction.setStatus(TransactionStatus.AUTHORIZED);
 
-        transaction.setStatus(TransactionStatus.COMPLETED);
+	    if (notificationClientImpl.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
+	        log.info("Notificação efetuada com sucesso.");
+	    }
 
-        return transactionMapper.toDTO(transaction);
-    }
+	    transaction.setStatus(TransactionStatus.COMPLETED);
+
+	    return transactionMapper.toDTO(transaction);
+	}
 
     protected void validateTransaction(TransactionDTO transactionDTO, UserEntity payer, UserEntity payee) {
         if (transactionDTO == null) {
