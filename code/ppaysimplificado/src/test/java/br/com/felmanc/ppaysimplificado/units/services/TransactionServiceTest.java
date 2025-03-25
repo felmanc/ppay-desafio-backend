@@ -10,12 +10,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
@@ -31,6 +34,7 @@ import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 
+@ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
     @Mock
@@ -51,26 +55,23 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
     
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    private UserEntity createUserEntity(Long id, BigDecimal balance, UserType type) {
+        UserEntity user = new UserEntity();
+        user.setId(id);
+        user.setBalance(balance);
+        user.setType(type);
+        return user;
     }
 
+    
     @Test
-    void testCreateTransaction() {
+    void testCreateTransactionSuccess() {
         // Dados de entrada
         TransactionDTO transactionDTO = new TransactionDTO(1L, 1L, 2L, new BigDecimal("100.00"), TransactionStatus.COMPLETED.name(), null);
-        
+
         // Mocking
-        UserEntity payer = new UserEntity();
-        payer.setId(1L);
-        payer.setBalance(new BigDecimal("200.00"));
-        payer.setType(UserType.COMMON);
-        
-        UserEntity payee = new UserEntity();
-        payee.setId(2L);
-        payee.setBalance(new BigDecimal("50.00"));
-        payee.setType(UserType.COMMON);
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
 
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
@@ -90,32 +91,20 @@ class TransactionServiceTest {
         verify(transactionRepository, times(1)).save(any(TransactionEntity.class));
         verify(notificationClientImpl, times(1)).sendNotification(any(UserEntity.class), anyString());
     }
-    
+
     @Test
     @Transactional
     void testCreateTransactionUnauthorized() {
         // Dados de entrada
         TransactionDTO transactionDTO = new TransactionDTO(1L, 1L, 2L, new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
-        // Configurando os dados iniciais
-        UserEntity payer = new UserEntity();
-        payer.setId(1L);
-        payer.setBalance(new BigDecimal("200.00"));
-        payer.setType(UserType.COMMON);
-        //userService.save(payer);
-
-        UserEntity payee = new UserEntity();
-        payee.setId(2L);
-        payee.setBalance(new BigDecimal("50.00"));
-        payee.setType(UserType.COMMON);
-        //userService.save(payee);
+        // Mocking
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
 
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(i -> i.getArguments()[0]);
-        
-        // Simulando a falha de autorização
-        //when(authorizationClient.authorizeTransaction()).thenThrow(new UnauthorizedTransactionException("Transação não autorizada pelo serviço externo."));
         when(authorizationClient.authorizeTransaction()).thenReturn(false);
 
         // Execução e Verificação
@@ -128,22 +117,15 @@ class TransactionServiceTest {
 //        assertEquals(new BigDecimal("200.00"), payer.getBalance());
 //        assertEquals(new BigDecimal("50.00"), payee.getBalance());
     }
-    
+
     @Test
     void testCreateTransactionInsufficientBalance() {
         // Dados de entrada
         TransactionDTO transactionDTO = new TransactionDTO(1L, 1L, 2L, new BigDecimal("300.00"), TransactionStatus.PENDING.name(), null);
-        
+
         // Mocking
-        UserEntity payer = new UserEntity();
-        payer.setId(1L);
-        payer.setBalance(new BigDecimal("200.00"));
-        payer.setType(UserType.COMMON);
-        
-        UserEntity payee = new UserEntity();
-        payee.setId(2L);
-        payee.setBalance(new BigDecimal("50.00"));
-        payee.setType(UserType.COMMON);
+        UserEntity payer = createUserEntity(1L, new BigDecimal("200.00"), UserType.COMMON);
+        UserEntity payee = createUserEntity(2L, new BigDecimal("50.00"), UserType.COMMON);
 
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
@@ -154,12 +136,10 @@ class TransactionServiceTest {
         });
 
         assertEquals("Saldo insuficiente.", exception.getMessage());
-
         verify(transactionRepository, times(0)).save(any(TransactionEntity.class));
         verify(notificationClientImpl, times(0)).sendNotification(any(UserEntity.class), anyString());
 
-//        assertEquals(new BigDecimal("200.00"), payer.getBalance());
-//        assertEquals(new BigDecimal("50.00"), payee.getBalance());
+        assertEquals(new BigDecimal("200.00"), payer.getBalance());
+        assertEquals(new BigDecimal("50.00"), payee.getBalance());
     }
-  
 }
