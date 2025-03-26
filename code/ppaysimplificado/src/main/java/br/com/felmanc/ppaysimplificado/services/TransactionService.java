@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
-import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
+import br.com.felmanc.ppaysimplificado.clients.NotificationClient;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
@@ -25,16 +25,16 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserService userService;
-    private final NotificationClientImpl notificationClientImpl; 
+    private final NotificationClient notificationClient; 
     private final TransactionMapper transactionMapper;
     private final AuthorizationClient authorizationClient;
 
 	public TransactionService(TransactionRepository transactionRepository, UserService userService,
-			NotificationClientImpl notificationClientImpl, TransactionMapper transactionMapper,
+			NotificationClient notificationClientImpl, TransactionMapper transactionMapper,
 			AuthorizationClient authorizationClient) {
 		this.transactionRepository = transactionRepository;
 		this.userService = userService;
-		this.notificationClientImpl = notificationClientImpl;
+		this.notificationClient = notificationClientImpl;
 		this.transactionMapper = transactionMapper;
 		this.authorizationClient = authorizationClient;
 	}
@@ -82,7 +82,7 @@ public class TransactionService {
 	    log.info("Transação autorizada pelo serviço externo.");
 	    transaction.setStatus(TransactionStatus.AUTHORIZED);
 
-	    if (notificationClientImpl.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
+	    if (notificationClient.sendNotification(payer, "Transação efetuada com sucesso. ID: " + transaction.getId())) {
 	        log.info("Notificação efetuada com sucesso.");
 	    }
 
@@ -91,7 +91,7 @@ public class TransactionService {
 	    return transactionMapper.toDTO(transaction);
 	}
 
-    protected void validateTransaction(TransactionDTO transactionDTO, UserEntity payer, UserEntity payee) {
+    private void validateTransaction(TransactionDTO transactionDTO, UserEntity payer, UserEntity payee) {
         if (transactionDTO == null) {
             log.error("O objeto TransactionDTO é nulo.");
             throw new IllegalArgumentException("O objeto TransactionDTO não pode ser nulo.");
@@ -128,7 +128,7 @@ public class TransactionService {
         }
     }
 
-    public boolean authorizeTransaction(TransactionEntity transaction) {
+    private boolean authorizeTransaction(TransactionEntity transaction) {
         return authorizationClient.authorizeTransaction();
     }
     
