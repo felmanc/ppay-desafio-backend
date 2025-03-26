@@ -13,9 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Tag(name = "Transaction Controller", description = "APIs relacionadas a operações de transação")
 @RestController
 @RequestMapping("/transfer")
 public class TransactionController {
@@ -31,8 +36,9 @@ public class TransactionController {
         log.info("TransactionService bean loaded: {}.", (transactionService != null));
     }
 
+    @Operation(summary = "Realiza uma transferência")
     @PostMapping
-    public ResponseEntity<TransactionDTO> transfer(@RequestBody TransactionDTO transactionDTO) {
+    public ResponseEntity<TransactionDTO> transfer(@Parameter(description = "Dados da transação", required = true) @Valid @RequestBody TransactionDTO transactionDTO) {
         log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}.",
                 transactionDTO.idPagador(), transactionDTO.idRecebedor(), transactionDTO.valor());
         TransactionDTO response = transactionService.createTransaction(transactionDTO);
@@ -40,6 +46,7 @@ public class TransactionController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Retorna todas as transações")
     @GetMapping
     public ResponseEntity<List<TransactionDTO>> getAllTransactions() {
         log.info("Recebida solicitação para listar todas as transações.");
