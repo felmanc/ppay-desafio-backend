@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,8 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
-import br.com.felmanc.ppaysimplificado.clients.AuthorizationClientImpl;
-import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
+import br.com.felmanc.ppaysimplificado.clients.NotificationClient;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
@@ -48,16 +48,13 @@ class TransactionServiceTest {
     private UserService userService;
     
     @Mock
-    private NotificationClientImpl notificationClientImpl;
+    private NotificationClient notificationClient;
     
     @Mock
     private TransactionMapper transactionMapper;
     
     @Mock
     private AuthorizationClient authorizationClient;
-
-    @Mock
-    private AuthorizationClientImpl authorizationClientImpl;
 
     @Mock
     private UserRepository userRepository;
@@ -139,7 +136,7 @@ class TransactionServiceTest {
         assertEquals(transaction1.getId(), result.get(0).id());
         assertEquals(transaction2.getId(), result.get(1).id());
     }    
-    
+
     @Test
     void testCreateTransactionSuccess() {
         // Dados de entrada
@@ -152,8 +149,8 @@ class TransactionServiceTest {
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(i -> i.getArguments()[0]);
-        when(authorizationClientImpl.authorizeTransaction()).thenReturn(true);
-        when(notificationClientImpl.sendNotification(any(UserEntity.class), anyString())).thenReturn(true);
+        when(authorizationClient.authorizeTransaction()).thenReturn(true);
+        when(notificationClient.sendNotification(any(UserEntity.class), anyString())).thenReturn(true);
         when(transactionMapper.toDTO(any(TransactionEntity.class))).thenReturn(transactionDTO);
 
         // Execução
@@ -165,8 +162,8 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("100.00"), payer.getBalance());
         assertEquals(new BigDecimal("150.00"), payee.getBalance());
         verify(transactionRepository, times(1)).save(any(TransactionEntity.class));
-        verify(notificationClientImpl, times(1)).sendNotification(any(UserEntity.class), anyString());
-        verify(authorizationClientImpl).authorizeTransaction();
+        verify(notificationClient, times(1)).sendNotification(any(UserEntity.class), anyString());
+        verify(authorizationClient).authorizeTransaction();
     }
 
     @Test
@@ -182,7 +179,7 @@ class TransactionServiceTest {
         when(userService.findUserEntityById(1L)).thenReturn(payer);
         when(userService.findUserEntityById(2L)).thenReturn(payee);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(i -> i.getArguments()[0]);
-        when(authorizationClientImpl.authorizeTransaction()).thenReturn(false);
+        when(authorizationClient.authorizeTransaction()).thenReturn(false);
 
         // Execução e Verificação
         Exception exception = assertThrows(UnauthorizedTransactionException.class, () -> {
@@ -214,7 +211,7 @@ class TransactionServiceTest {
 
         assertEquals("Saldo insuficiente.", exception.getMessage());
         verify(transactionRepository, times(0)).save(any(TransactionEntity.class));
-        verify(notificationClientImpl, times(0)).sendNotification(any(UserEntity.class), anyString());
+        verify(notificationClient, times(0)).sendNotification(any(UserEntity.class), anyString());
 
         assertEquals(new BigDecimal("200.00"), payer.getBalance());
         assertEquals(new BigDecimal("50.00"), payee.getBalance());
