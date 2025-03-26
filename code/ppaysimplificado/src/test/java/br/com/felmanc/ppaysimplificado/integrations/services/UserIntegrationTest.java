@@ -30,7 +30,7 @@ import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 
 @WebMvcTest(UserController.class)
-public class UserControllerTest {
+public class UserIntegrationTest {
 
     @MockitoBean
     private TransactionRepository transactionRepository;
