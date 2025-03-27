@@ -9,6 +9,8 @@ import br.com.felmanc.ppaysimplificado.services.UserService;
 @Configuration
 public class TestConfig {
 
+	public static final int SERVER_PORT = 8888;
+	
     @Bean
     UserService userService() {
         return Mockito.mock(UserService.class);
