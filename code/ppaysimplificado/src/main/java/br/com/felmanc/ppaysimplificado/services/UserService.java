@@ -68,14 +68,12 @@ public class UserService {
     }
     
     public UserDTO createUser(UserDTO userDTO) {
-        log.info("Iniciando criação de usuário");
-        
-    	if (userDTO == null) {
+        if (userDTO == null) {
             log.info("Não é possível criar usuário null");
             throw new IllegalArgumentException("Não é possível criar usuário null");
         }
 
-    	log.info("Usuário com CPF: {}", userDTO.cpf());
+        log.info("Iniciando criação de usuário com CPF: {}", userDTO.cpf());
         UserEntity userEntity = validateUser(userDTO);
         
         userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(new BigDecimal("0.0")));
