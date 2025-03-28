@@ -33,7 +33,7 @@ public class UserController {
     @Operation(summary = "Cria um novo usuário")
     @PostMapping
     public ResponseEntity<UserDTO> createUser(@Parameter(description = "Dados do novo usuário", required = true) @Valid @RequestBody UserDTO userDTO) {
-        log.info("Recebida requisição para criar usuário.");
+        log.info("Recebida requisição para criar usuário: {}", userDTO);
         UserDTO response = userService.createUser(userDTO);
         log.info("Usuário criado com sucesso: {}", response.nome());
         return ResponseEntity.ok(response);
