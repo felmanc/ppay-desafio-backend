@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -68,7 +69,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
         objectMapper = new ObjectMapper();
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         objectMapper.registerModule(new ParameterNamesModule());
-
+/*
         StringBuffer logBeanName = new StringBuffer();
         
         logBeanName.append("Beans disponíveis no contexto do Spring:\n");
@@ -77,7 +78,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
             logBeanName.append("\n");
         }
         
-        log.info(logBeanName.toString());
+        log.info(logBeanName.toString());*/
     }
 
     private void clearDatabase() {
@@ -85,6 +86,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
     }
     
 	@Test
+	@Order(1)
 	@DirtiesContext
 	public void testCreateUser() {
         UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
@@ -127,6 +129,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	}
 	
 	@Test
+	@Order(2)
 	public void testCreateUserFail() {
         UserDTO userDTO = new UserDTO(1L, "João da Silva", "111.222.333-44", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 	
@@ -148,9 +151,9 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	}
 	
 	@Test
+	@Order(3)
 	@DirtiesContext
 	public void testGetAllUsers() {
-	    // Criar um usuário antes de buscar todos os usuários
 	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 
 	    clearDatabase();
@@ -202,6 +205,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	}
 	
 	@Test
+	@Order(4)
 	public void testGetUserById() {
 	    // Criar um usuário antes de buscar todos os usuários
 	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
@@ -229,7 +233,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	    assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
 	    assertEquals("O nome do usuário deve ser igual ao esperado", userDTO.nome(), createdUser.nome());
 		
-		Long userId = 1L; // Supondo que o usuário com ID 1 existe
+		Long userId = createdUser.id();
 
         log.info("Enviando requisição para buscar usuário por ID: {}", userId);
     
