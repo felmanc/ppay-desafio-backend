@@ -5,14 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-import br.com.felmanc.ppaysimplificado.configs.TestConfig;
+import br.com.felmanc.ppaysimplificado.configs.IntegrationTestConfig;
 import br.com.felmanc.ppaysimplificado.integrations.containers.AbstractIntegrationTest;
 
+@ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 public class SwaggerIntegrationTest extends AbstractIntegrationTest{
 
-	private final static String serverPort = Integer.toString(TestConfig.SERVER_PORT);
+	private final static String serverPort = Integer.toString(IntegrationTestConfig.SERVER_PORT);
 	
     static {
         System.setProperty("server.port", serverPort);
@@ -23,7 +25,7 @@ public class SwaggerIntegrationTest extends AbstractIntegrationTest{
 		var content = 
 			given()
 				.basePath("/swagger-ui/index.html")
-				.port(TestConfig.SERVER_PORT)
+				.port(IntegrationTestConfig.SERVER_PORT)
 				.when()
 					.get()
 				.then()
@@ -40,7 +42,7 @@ public class SwaggerIntegrationTest extends AbstractIntegrationTest{
 	    var openApiContent =
 	        given()
 	            .basePath("/v3/api-docs")
-	            .port(TestConfig.SERVER_PORT)
+	            .port(IntegrationTestConfig.SERVER_PORT)
 	            .when()
 	                .get()
 	            .then()
