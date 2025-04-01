@@ -15,14 +15,14 @@ public class UserTypeDeserializer extends JsonDeserializer<UserType> {
     @Override
     public UserType deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         String text = p.getText();
-        log.debug("[Deserialização] Texto obtido para deserialização: {}", text);
+        log.debug("[DeserializaÃ§Ã£o] Texto obtido para deserializaÃ§Ã£o: {}", text);
 
         try {
             UserType userType = UserType.fromString(text);
-            log.info("[Deserialização] UserType deserializado com sucesso: {}", userType);
+            log.info("[DeserializaÃ§Ã£o] UserType deserializado com sucesso: {}", userType);
             return userType;
         } catch (IllegalArgumentException e) {
-            log.error("[Erro] Falha na deserialização do UserType: {}", text, e);
+            log.error("[Erro] Falha na deserializaÃ§Ã£o do UserType: {}", text, e);
             throw e;
         }
     }
