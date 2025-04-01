@@ -153,7 +153,33 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	@Test
 	@Order(3)
 	@DirtiesContext
-	public void testGetAllUsers() {
+    public void testGetAllUsers_NoUsersFound() {
+        clearDatabase();
+        
+        log.info("Enviando requisição para buscar todos os usuários");
+
+        Response response = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/user")
+                .then()
+                .extract()
+                .response();
+
+        log.info("Resposta da busca de todos os usuários: {}", response.asString());
+
+        if (response.statusCode() != HttpStatus.NO_CONTENT.value()) {
+            log.info("Erro ao buscar todos os usuários: {}", response.asString());
+        }
+
+        assertEquals(HttpStatus.NO_CONTENT.value(), response.statusCode());
+    }
+
+    @Test
+    @Order(4)
+    @DirtiesContext
+    public void testGetAllUsers_UsersFound() {
 	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 
 	    clearDatabase();
@@ -205,9 +231,8 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	}
 	
 	@Test
-	@Order(4)
+    @Order(5)
 	public void testGetUserById() {
-	    // Criar um usuário antes de buscar todos os usuários
 	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 
 	    clearDatabase();
