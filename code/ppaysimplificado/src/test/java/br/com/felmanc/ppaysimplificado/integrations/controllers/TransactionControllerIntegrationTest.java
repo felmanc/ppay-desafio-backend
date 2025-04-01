@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,11 +19,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 
+import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
 import br.com.felmanc.ppaysimplificado.configs.IntegrationTestConfig;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
@@ -46,6 +49,9 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
 
     private final static String serverPort = Integer.toString(IntegrationTestConfig.SERVER_PORT);
 
+    @MockitoBean
+    private AuthorizationClient authorizationClient;
+    
     @Autowired
     ApplicationContext context;
 
@@ -114,6 +120,9 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         UserDTO createdPayee = responsePayee.getBody().as(UserDTO.class);
         assertNotNull(createdPayee);
 
+        // Simulação de resposta bem-sucedida
+        when(authorizationClient.authorizeTransaction()).thenReturn(true);
+        
         // Create transaction
         TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
@@ -176,6 +185,9 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         UserDTO createdPayee = responsePayee.getBody().as(UserDTO.class);
         assertNotNull(createdPayee);
 
+		// Simulação de resposta bem-sucedida para autorização
+		when(authorizationClient.authorizeTransaction()).thenReturn(true);
+
         // Create transaction
         TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
@@ -213,5 +225,88 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         List<TransactionDTO> transactions = getAllResponse.jsonPath().getList(".", TransactionDTO.class);
         assertNotNull(transactions, "A lista de transações não deve ser null");
         assertTrue(transactions.size() > 0, "Deve haver pelo menos 1 transação no banco");
+    }
+    
+    @Test
+    @Order(3)
+    @DirtiesContext
+    public void testTransferUnauthorized() {
+        UserDTO payer = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("200.00"), UserType.COMMON);
+        UserDTO payee = new UserDTO(null, "Maria Oliveira", "22233344455", "maria@exemplo.com", "senha123", new BigDecimal("50.00"), UserType.COMMON);
+
+        clearDatabase();
+
+        // Create payer
+        Response responsePayer = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .body(payer)
+                .when()
+                .post("/user")
+                .then()
+                .extract()
+                .response();
+        assertEquals(HttpStatus.OK.value(), responsePayer.statusCode());
+        UserDTO createdPayer = responsePayer.getBody().as(UserDTO.class);
+        assertNotNull(createdPayer);
+
+        // Create payee
+        Response responsePayee = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .body(payee)
+                .when()
+                .post("/user")
+                .then()
+                .extract()
+                .response();
+        assertEquals(HttpStatus.OK.value(), responsePayee.statusCode());
+        UserDTO createdPayee = responsePayee.getBody().as(UserDTO.class);
+        assertNotNull(createdPayee);
+
+        when(authorizationClient.authorizeTransaction()).thenReturn(false);
+        
+        // Simulate unauthorized transaction
+        TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
+
+        log.info("Enviando requisição para realizar transferência não autorizada: {}", transactionDTO);
+                
+        Response response = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .body(transactionDTO)
+                .when()
+                .post("/transfer")
+                .then()
+                .extract()
+                .response();
+        
+        log.info("Resposta da transferência não autorizada: {}", response.asString());
+
+        assertEquals(HttpStatus.FORBIDDEN.value(), response.statusCode());
+
+        // Verificações de saldo após a exceção (reversão do @Transactional)
+        UserDTO updatedPayer = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/user/" + createdPayer.id())
+                .then()
+                .extract()
+                .response()
+                .getBody()
+                .as(UserDTO.class);
+        UserDTO updatedPayee = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/user/" + createdPayee.id())
+                .then()
+                .extract()
+                .response()
+                .getBody()
+                .as(UserDTO.class);
+        assertEquals(new BigDecimal("200.00"), updatedPayer.saldo());
+        assertEquals(new BigDecimal("50.00"), updatedPayee.saldo());
     }
 }
