@@ -1,7 +1,7 @@
 package br.com.felmanc.ppaysimplificado.integrations.controllers;
 
 import static io.restassured.RestAssured.given;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,7 +125,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
         assertNotNull(createdUser, "A resposta não deve ser null");
         log.info("Usuário criado: {}", createdUser);
         assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
-        assertEquals("O nome do usuário deve ser igual ao esperado", userDTO.nome(), createdUser.nome());
+        assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
 	}
 	
 	@Test
@@ -203,7 +203,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	    UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
 	    assertNotNull(createdUser, "A resposta não deve ser null");
 	    assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
-	    assertEquals("O nome do usuário deve ser igual ao esperado", userDTO.nome(), createdUser.nome());
+        assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
 
 	    // Buscar todos os usuários
 	    log.info("Enviando requisição para buscar todos os usuários");
@@ -256,7 +256,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 	    UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
 	    assertNotNull(createdUser, "A resposta não deve ser null");
 	    assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
-	    assertEquals("O nome do usuário deve ser igual ao esperado", userDTO.nome(), createdUser.nome());
+        assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
 		
 		Long userId = createdUser.id();
 
