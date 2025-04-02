@@ -12,14 +12,17 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,13 +48,24 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class TransactionControllerIntegrationTest extends AbstractIntegrationTest {
 
     private final static String serverPort = Integer.toString(IntegrationTestConfig.SERVER_PORT);
 
-    @MockitoBean
+    @Autowired
     private AuthorizationClient authorizationClient;
     
+    @TestConfiguration
+    static class TestConfig {
+        
+        @Bean
+        @Primary
+        AuthorizationClient authorizationClient() {
+            return Mockito.mock(AuthorizationClient.class);
+        }
+    }
+
     @Autowired
     ApplicationContext context;
 
@@ -67,6 +81,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
 
     @BeforeEach
     public void setUp() {
+            
         RestAssured.port = IntegrationTestConfig.SERVER_PORT;
         specification = new RequestSpecBuilder()
                 .addFilter(new RequestLoggingFilter(LogDetail.ALL))
