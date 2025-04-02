@@ -11,18 +11,20 @@ import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
-import lombok.extern.slf4j.Slf4j;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
+
 
 @Service
-@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final LoggerUtil loggerUtil;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, LoggerUtil loggerUtil) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.loggerUtil = loggerUtil;
     }
 
     private void campoObrigatorio(Object campo, String mensagem) {
@@ -38,11 +40,11 @@ public class UserService {
     }    
     
     private UserEntity validateUser(UserDTO userDTO) {
-        log.info("[Validação] Iniciando validação do usuário com CPF: {}", userDTO.cpf());
+        loggerUtil.logInfo("Validação", "Iniciando validação do usuário");
 
         try {
             campoObrigatorio(userDTO.nome(), "O nome do usuário é obrigatório.");
-            campoObrigatorio(userDTO.cpf(), "O CPF/ CNPJ é obrigatório.");
+            campoObrigatorio(userDTO.cpf(), "O CPF/CNPJ é obrigatório.");
             campoObrigatorio(userDTO.email(), "O e-mail é obrigatório.");
             campoObrigatorio(userDTO.senha(), "A senha é obrigatória.");
             campoObrigatorio(userDTO.tipo(), "O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
@@ -55,74 +57,69 @@ public class UserService {
                     "O e-mail deve estar em um formato válido.");
             
             UserEntity userEntity = userMapper.toEntity(userDTO);
-            log.debug("[Validação] Usuário convertido para entidade: {}", userEntity);
+            loggerUtil.logDebug("Validação", "Usuário convertido para entidade");
 
             Optional<UserEntity> existingByCpf = userRepository.findByCpf(userEntity.getCpf());
             if (existingByCpf.isPresent()) {
-                log.warn("[Validação] Já existe um usuário com este CPF: {}", userEntity.getCpf());
+                loggerUtil.logWarn("Validação", "Já existe um usuário com este CPF");
                 throw new IllegalArgumentException("Já existe um usuário com este CPF.");
             }
 
             Optional<UserEntity> existingByEmail = userRepository.findByEmail(userEntity.getEmail());
             if (existingByEmail.isPresent()) {
-                log.warn("[Validação] Já existe um usuário com este e-mail: {}", userEntity.getEmail());
+                loggerUtil.logWarn("Validação", "Já existe um usuário com este e-mail");
                 throw new IllegalArgumentException("Já existe um usuário com este e-mail.");
             }
 
-            log.info("[Validação] Validação concluída com sucesso: {}", userEntity);
+            loggerUtil.logInfo("Validação", "Validação concluída com sucesso");
             return userEntity;
 
         } catch (IllegalArgumentException e) {
-            log.error("[Erro] Validação do usuário falhou: {}", e.getMessage());
+            loggerUtil.logError("Validação", "Validação do usuário falhou: {}", e.getMessage());
             throw e;
         }
     }
 
     public UserDTO createUser(UserDTO userDTO) {
         if (userDTO == null) {
-            log.error("[Erro] Tentativa de criação de usuário null");
+            loggerUtil.logError("Criação", "Tentativa de criação de usuário null");
             throw new IllegalArgumentException("Não é possível criar usuário null");
         }
 
-        log.info("[Criação] Iniciando criação de usuário com CPF: {}", userDTO.cpf());
+        loggerUtil.logInfo("Criação", "Iniciando criação de usuário");
 
         try {
             UserEntity userEntity = validateUser(userDTO);
-            log.info("[Criação] Validação do usuário concluída: {}", userEntity);
+            loggerUtil.logInfo("Criação", "Validação do usuário concluída");
             
             userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(new BigDecimal("0.0")));
-            log.debug("[Criação] Saldo ajustado: {}", userEntity.getBalance());
+            loggerUtil.logDebug("Criação", "Saldo ajustado: {}", userEntity.getBalance());
 
             UserEntity savedUser = userRepository.save(userEntity);
-            log.info("[Criação] Usuário criado com sucesso: ID {}", savedUser.getId());
+            loggerUtil.logInfo("Criação", "Usuário criado com sucesso: ID {}", savedUser.getId());
 
             UserDTO createdUser = userMapper.toDTO(savedUser);
-            log.debug("[Criação] Usuário convertido para DTO: {}", createdUser);
-
-            if (createdUser == null) {
-                log.error("[Erro] Conversão falhou: UserMapper retornou null");
-            }
+            loggerUtil.logDebug("Criação", "Usuário convertido para DTO");
 
             return createdUser;
 
         } catch (Exception e) {
-            log.error("[Erro] Falha ao criar usuário: {}", e.getMessage());
+            loggerUtil.logError("Criação", "Falha ao criar usuário: {}", e.getMessage());
             throw e;
         }
     }
 
-
     public List<UserDTO> getAllUsers() {
-        log.info("Buscando todos os usuários");
+        loggerUtil.logInfo("Consulta", "Buscando todos os usuários");
         List<UserEntity> userEntities = userRepository.findAll();
-        log.info("Número de usuários encontrados: {}", userEntities.size());
+        loggerUtil.logInfo("Consulta", "Número de usuários encontrados: {}", userEntities.size());
         return userEntities.stream()
                 .map(userMapper::toDTO)
                 .collect(Collectors.toList());
     }
     
     public UserDTO getUserById(Long id) {
-        log.info("Buscando usuário pelo ID: {}", id);
+        loggerUtil.logInfo("Consulta", "Buscando usuário pelo ID: {}", id);
         UserEntity userEntity = findUserEntityById(id);
         return userMapper.toDTO(userEntity);
     }
@@ -130,7 +127,7 @@ public class UserService {
     public UserEntity findUserEntityById(Long id) {
         UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.error("Usuário com ID {} não encontrado", id);
+                    loggerUtil.logError("Consulta", "Usuário com ID {} não encontrado", id);
                     return new IllegalArgumentException("Usuário com o ID " + id + " não foi encontrado.");
                 });
         return userEntity;
