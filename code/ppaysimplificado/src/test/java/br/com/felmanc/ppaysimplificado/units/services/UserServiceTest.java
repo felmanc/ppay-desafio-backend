@@ -265,7 +265,7 @@ public class UserServiceTest {
 		Exception exceptionCpf = assertThrows(IllegalArgumentException.class, () -> {
 			userService.createUser(userWithoutCpf);
 		});
-		assertTrue(exceptionCpf.getMessage().contains("O CPF/ CNPJ é obrigatório."));
+		assertTrue(exceptionCpf.getMessage().contains("O CPF/CNPJ é obrigatório."));
 	}
 
 	@Test
