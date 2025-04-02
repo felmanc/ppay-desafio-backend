@@ -32,32 +32,38 @@ public class UserController {
 
     @Operation(summary = "Cria um novo usuário")
     @PostMapping
-    public ResponseEntity<UserDTO> createUser(@Parameter(description = "Dados do novo usuário", required = true) @Valid @RequestBody UserDTO userDTO) {
-        log.info("Recebida requisição para criar usuário: {}", userDTO);
+    public ResponseEntity<UserDTO> createUser(
+    		@Parameter(description = "Dados do novo usuário", required = true)
+    		@Valid @RequestBody UserDTO userDTO) {
+
+        log.info("[Usuário] Recebida requisição para criar usuário: {}", userDTO);
+
         UserDTO response = userService.createUser(userDTO);
-        log.info("Usuário criado com sucesso: {}", response.nome());
+        log.info("[Usuário] Usuário criado com sucesso: {}", response != null ? response.nome() : "null");
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Retorna todos os usuários")
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
-        log.info("Recebida requisição para buscar todos os usuários");
+        log.info("[Usuário] Recebida requisição para buscar todos os usuários");
         List<UserDTO> users = userService.getAllUsers();
         if (users.isEmpty()) {
-            log.warn("Nenhum usuário encontrado");
+            log.warn("[Usuário] Nenhum usuário encontrado");
             return ResponseEntity.noContent().build();
         }
-        log.info("Número de usuários encontrados: {}", users.size());
+        log.info("[Usuário] Número de usuários encontrados: {}", users.size());
         return ResponseEntity.ok(users);
     }
 
     @Operation(summary = "Retorna um usuário por ID")
     @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@Parameter(description = "ID do usuário", required = true) @PathVariable Long id) {
-        log.info("Recebida requisição para buscar o usuário com ID: {}", id);
+    public ResponseEntity<UserDTO> getUserById(
+    		@Parameter(description = "ID do usuário", required = true)
+    		@PathVariable Long id) {
+        log.info("[Usuário] Recebida requisição para buscar o usuário com ID: {}", id);
         UserDTO userDTO = userService.getUserById(id);
-        log.info("Usuário encontrado: {}", userDTO.nome());
+        log.info("[Usuário] Usuário encontrado: {}", userDTO.nome());
         return ResponseEntity.ok(userDTO);
     }
 }
