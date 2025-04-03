@@ -74,6 +74,7 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void clearDatabase() {
+        jdbcTemplate.execute("DELETE FROM transactions");
         jdbcTemplate.execute("DELETE FROM users");
     }
     
