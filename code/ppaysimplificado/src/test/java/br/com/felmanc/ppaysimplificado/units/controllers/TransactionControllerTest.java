@@ -21,12 +21,16 @@ import org.springframework.web.server.ResponseStatusException;
 import br.com.felmanc.ppaysimplificado.controllers.TransactionController;
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
 public class TransactionControllerTest {
 
     @Mock
     private TransactionService transactionService;
-
+	
+    @Mock
+    private LoggerUtil loggerUtil;
+    
     @InjectMocks
     private TransactionController transactionController;
 

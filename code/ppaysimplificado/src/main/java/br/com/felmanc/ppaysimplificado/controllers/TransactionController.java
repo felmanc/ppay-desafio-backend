@@ -13,45 +13,47 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Tag(name = "Transaction Controller", description = "APIs relacionadas a operações de transação")
 @RestController
 @RequestMapping("/transfer")
+@Tag(name = "Transaction Controller", description = "APIs relacionadas a operações de transação")
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final LoggerUtil loggerUtil;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService, LoggerUtil loggerUtil) {
         this.transactionService = transactionService;
+        this.loggerUtil = loggerUtil;
     }
 
     @EventListener(ContextRefreshedEvent.class)
     public void checkBean() {
-        log.info("TransactionService bean loaded: {}.", (transactionService != null));
+        loggerUtil.logInfo("Bean", "TransactionService bean loaded: {}.", (transactionService != null));
     }
 
     @Operation(summary = "Realiza uma transferência")
     @PostMapping
     public ResponseEntity<TransactionDTO> transfer(@Parameter(description = "Dados da transação", required = true) @Valid @RequestBody TransactionDTO transactionDTO) {
-        log.info("Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}.",
+        loggerUtil.logInfo("Transferência", "Recebida solicitação de transferência. Pagador: {}, Recebedor: {}, Valor: {}.",
                 transactionDTO.idPagador(), transactionDTO.idRecebedor(), transactionDTO.valor());
         TransactionDTO response = transactionService.createTransaction(transactionDTO);
-        log.info("Transferência realizada com sucesso. ID da Transação: {}.", response.id());
+        loggerUtil.logInfo("Transferência", "Transferência realizada com sucesso. ID da Transação: {}.", response.id());
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Retorna todas as transações")
     @GetMapping
     public ResponseEntity<List<TransactionDTO>> getAllTransactions() {
-        log.info("Recebida solicitação para listar todas as transações.");
+        loggerUtil.logInfo("Consulta", "Recebida solicitação para listar todas as transações.");
         List<TransactionDTO> transactions = transactionService.getAllTransactions();
-        log.info("Total de transações retornadas: {}.", transactions.size());
+        loggerUtil.logInfo("Consulta", "Total de transações retornadas: {}.", transactions.size());
         return ResponseEntity.ok(transactions);
     }
 }

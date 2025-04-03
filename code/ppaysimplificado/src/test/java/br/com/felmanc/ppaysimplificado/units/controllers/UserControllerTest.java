@@ -21,11 +21,15 @@ import br.com.felmanc.ppaysimplificado.controllers.UserController;
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.services.UserService;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
 public class UserControllerTest {
 
     @Mock
     private UserService userService;
+	
+    @Mock
+    private LoggerUtil loggerUtil;
 
     @InjectMocks
     private UserController userController;
@@ -50,7 +54,7 @@ public class UserControllerTest {
 
     @Test
     public void testCreateUserError() {
-        UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
+        UserDTO userDTO = new UserDTO(null, "John Doe", "123.456.789-00", "john@example.com", "password", BigDecimal.ZERO, UserType.COMMON);
         when(userService.createUser(userDTO)).thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao criar usuário"));
 
         Exception exception = assertThrows(ResponseStatusException.class, () -> {
