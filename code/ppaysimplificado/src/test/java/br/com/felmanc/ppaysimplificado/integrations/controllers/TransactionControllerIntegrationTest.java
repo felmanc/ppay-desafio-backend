@@ -35,6 +35,7 @@ import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.enums.TransactionStatus;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.integrations.containers.AbstractIntegrationTest;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.filter.log.LogDetail;
@@ -43,9 +44,7 @@ import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -55,6 +54,9 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
 
     @Autowired
     private AuthorizationClient authorizationClient;
+
+    @Autowired
+    private LoggerUtil loggerUtil;
     
     @TestConfiguration
     static class TestConfig {
@@ -141,7 +143,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         // Create transaction
         TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
-        log.info("Enviando requisição para realizar transferência: {}", transactionDTO);
+        loggerUtil.logInfo("Teste", "Enviando requisição para realizar transferência: {}", transactionDTO);
         
         Response response = given()
                 .spec(specification)
@@ -153,7 +155,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
                 .extract()
                 .response();
         
-        log.info("Resposta da transferência: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da transferência: {}", response.asString());
 
         assertEquals(HttpStatus.OK.value(), response.statusCode());
 
@@ -200,13 +202,13 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         UserDTO createdPayee = responsePayee.getBody().as(UserDTO.class);
         assertNotNull(createdPayee);
 
-		// Simulação de resposta bem-sucedida para autorização
-		when(authorizationClient.authorizeTransaction()).thenReturn(true);
+        // Simulação de resposta bem-sucedida para autorização
+        when(authorizationClient.authorizeTransaction()).thenReturn(true);
 
         // Create transaction
         TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
-        log.info("Enviando requisição para realizar transferência: {}", transactionDTO);
+        loggerUtil.logInfo("Teste", "Enviando requisição para realizar transferência: {}", transactionDTO);
         
         Response response = given()
                 .spec(specification)
@@ -218,11 +220,11 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
                 .extract()
                 .response();
         
-        log.info("Resposta da transferência: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da transferência: {}", response.asString());
         assertEquals(HttpStatus.OK.value(), response.statusCode());
 
         // Get all transactions
-        log.info("Enviando requisição para buscar todas as transações");
+        loggerUtil.logInfo("Teste", "Enviando requisição para buscar todas as transações");
 
         Response getAllResponse = given()
                 .spec(specification)
@@ -233,7 +235,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
                 .extract()
                 .response();
         
-        log.info("Resposta da busca de todas as transações: {}", getAllResponse.asString());
+        loggerUtil.logInfo("Teste", "Resposta da busca de todas as transações: {}", getAllResponse.asString());
 
         assertEquals(HttpStatus.OK.value(), getAllResponse.statusCode());
 
@@ -264,7 +266,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         assertEquals(HttpStatus.OK.value(), responsePayer.statusCode());
         UserDTO createdPayer = responsePayer.getBody().as(UserDTO.class);
         assertNotNull(createdPayer);
-
+        
         // Create payee
         Response responsePayee = given()
                 .spec(specification)
@@ -284,7 +286,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
         // Simulate unauthorized transaction
         TransactionDTO transactionDTO = new TransactionDTO(null, createdPayer.id(), createdPayee.id(), new BigDecimal("100.00"), TransactionStatus.PENDING.name(), null);
 
-        log.info("Enviando requisição para realizar transferência não autorizada: {}", transactionDTO);
+        loggerUtil.logInfo("Teste", "Enviando requisição para realizar transferência não autorizada: {}", transactionDTO);
                 
         Response response = given()
                 .spec(specification)
@@ -296,7 +298,7 @@ public class TransactionControllerIntegrationTest extends AbstractIntegrationTes
                 .extract()
                 .response();
         
-        log.info("Resposta da transferência não autorizada: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da transferência não autorizada: {}", response.asString());
 
         assertEquals(HttpStatus.FORBIDDEN.value(), response.statusCode());
 

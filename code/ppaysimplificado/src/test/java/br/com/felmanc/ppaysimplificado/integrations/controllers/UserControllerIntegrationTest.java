@@ -28,6 +28,7 @@ import br.com.felmanc.ppaysimplificado.configs.IntegrationTestConfig;
 import br.com.felmanc.ppaysimplificado.dtos.UserDTO;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.integrations.containers.AbstractIntegrationTest;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.filter.log.LogDetail;
@@ -36,9 +37,7 @@ import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 public class UserControllerIntegrationTest extends AbstractIntegrationTest {
@@ -47,6 +46,9 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     ApplicationContext context;
+
+    @Autowired
+    private LoggerUtil loggerUtil;
 
     static {
         System.setProperty("server.port", serverPort);
@@ -69,31 +71,21 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
         objectMapper = new ObjectMapper();
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         objectMapper.registerModule(new ParameterNamesModule());
-/*
-        StringBuffer logBeanName = new StringBuffer();
-        
-        logBeanName.append("Beans disponíveis no contexto do Spring:\n");
-        for (String beanName : context.getBeanDefinitionNames()) {
-            logBeanName.append(beanName);
-            logBeanName.append("\n");
-        }
-        
-        log.info(logBeanName.toString());*/
     }
 
     private void clearDatabase() {
         jdbcTemplate.execute("DELETE FROM users");
     }
     
-	@Test
-	@Order(1)
-	@DirtiesContext
-	public void testCreateUser() {
+    @Test
+    @Order(1)
+    @DirtiesContext
+    public void testCreateUser() {
         UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
-	
+    
         clearDatabase();
         
-        log.info("Enviando requisição para criar usuário: {}", userDTO);
+        loggerUtil.logInfo("Teste", "Enviando requisição para criar usuário: {}", userDTO);
         
         Response response = given()
                 .spec(specification)
@@ -104,36 +96,36 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 .then()
                 .extract()
                 .response();
-	
-        log.info("Resposta da criação de usuário: {}", response.asString());
-	
+    
+        loggerUtil.logInfo("Teste", "Resposta da criação de usuário: {}", response.asString());
+    
         if (response.statusCode() != HttpStatus.OK.value()) {
-            log.info("Erro ao criar usuário: {}", response.asString());
+            loggerUtil.logInfo("Teste", "Erro ao criar usuário: {}", response.asString());
         }
         
         assertEquals(HttpStatus.OK.value(), response.statusCode());
-	
+    
         UserDTO createdUser = null;
         try {
             createdUser = objectMapper.readValue(response.asString(), UserDTO.class);
         } catch (JsonMappingException e) {
-            log.error("Erro ao mapear JSON para UserDTO", e);
+            loggerUtil.logError("Teste", "Erro ao mapear JSON para UserDTO", e);
         } catch (JsonProcessingException e) {
-            log.error("Erro ao processar JSON", e);
+            loggerUtil.logError("Teste", "Erro ao processar JSON", e);
         }
-	
+    
         assertNotNull(createdUser, "A resposta não deve ser null");
-        log.info("Usuário criado: {}", createdUser);
+        loggerUtil.logInfo("Teste", "Usuário criado: {}", createdUser);
         assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
         assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
-	}
-	
-	@Test
-	@Order(2)
-	public void testCreateUserFail() {
+    }
+    
+    @Test
+    @Order(2)
+    public void testCreateUserFail() {
         UserDTO userDTO = new UserDTO(1L, "João da Silva", "111.222.333-44", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
-	
-        log.info("Enviando requisição para criar usuário (falha esperada): {}", userDTO);
+    
+        loggerUtil.logInfo("Teste", "Enviando requisição para criar usuário (falha esperada): {}", userDTO);
         
         Response response = given()
                 .spec(specification)
@@ -144,19 +136,19 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 .then()
                 .extract()
                 .response();
-	
-        log.info("Resposta da criação de usuário (falha): {}", response.asString());
-	
+    
+        loggerUtil.logInfo("Teste", "Resposta da criação de usuário (falha): {}", response.asString());
+    
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.statusCode());
-	}
-	
-	@Test
-	@Order(3)
-	@DirtiesContext
+    }
+    
+    @Test
+    @Order(3)
+    @DirtiesContext
     public void testGetAllUsers_NoUsersFound() {
         clearDatabase();
         
-        log.info("Enviando requisição para buscar todos os usuários");
+        loggerUtil.logInfo("Teste", "Enviando requisição para buscar todos os usuários");
 
         Response response = given()
                 .spec(specification)
@@ -167,10 +159,10 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 .extract()
                 .response();
 
-        log.info("Resposta da busca de todos os usuários: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da busca de todos os usuários: {}", response.asString());
 
         if (response.statusCode() != HttpStatus.NO_CONTENT.value()) {
-            log.info("Erro ao buscar todos os usuários: {}", response.asString());
+            loggerUtil.logInfo("Teste", "Erro ao buscar todos os usuários: {}", response.asString());
         }
 
         assertEquals(HttpStatus.NO_CONTENT.value(), response.statusCode());
@@ -180,87 +172,87 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
     @Order(4)
     @DirtiesContext
     public void testGetAllUsers_UsersFound() {
-	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
+        UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 
-	    clearDatabase();
-	    
-	    log.info("Enviando requisição para criar usuário: {}", userDTO);
+        clearDatabase();
+        
+        loggerUtil.logInfo("Teste", "Enviando requisição para criar usuário: {}", userDTO);
 
-	    Response createUserResponse = given()
-	            .spec(specification)
-	            .contentType(ContentType.JSON)
-	            .body(userDTO)
-	            .when()
-	            .post("/user")
-	            .then()
-	            .extract()
-	            .response();
+        Response createUserResponse = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .body(userDTO)
+                .when()
+                .post("/user")
+                .then()
+                .extract()
+                .response();
 
-	    log.info("Resposta da criação de usuário: {}", createUserResponse.asString());
+        loggerUtil.logInfo("Teste", "Resposta da criação de usuário: {}", createUserResponse.asString());
 
-	    assertEquals(HttpStatus.OK.value(), createUserResponse.statusCode());
+        assertEquals(HttpStatus.OK.value(), createUserResponse.statusCode());
 
-	    UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
-	    assertNotNull(createdUser, "A resposta não deve ser null");
-	    assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
+        UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
+        assertNotNull(createdUser, "A resposta não deve ser null");
+        assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
         assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
 
-	    // Buscar todos os usuários
-	    log.info("Enviando requisição para buscar todos os usuários");
+        // Buscar todos os usuários
+        loggerUtil.logInfo("Teste", "Enviando requisição para buscar todos os usuários");
 
-	    Response response = given()
-	            .spec(specification)
-	            .contentType(ContentType.JSON)
-	            .when()
-	            .get("/user")
-	            .then()
-	            .extract()
-	            .response();
+        Response response = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/user")
+                .then()
+                .extract()
+                .response();
 
-	    log.info("Resposta da busca de todos os usuários: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da busca de todos os usuários: {}", response.asString());
 
-	    if (response.statusCode() != HttpStatus.OK.value()) {
-	        log.info("Erro ao buscar todos os usuários: {}", response.asString());
-	    }
+        if (response.statusCode() != HttpStatus.OK.value()) {
+            loggerUtil.logInfo("Teste", "Erro ao buscar todos os usuários: {}", response.asString());
+        }
 
-	    assertEquals(HttpStatus.OK.value(), response.statusCode());
+        assertEquals(HttpStatus.OK.value(), response.statusCode());
 
-	    UserDTO[] users = response.getBody().as(UserDTO[].class);
-	    assertNotNull(users, "A lista de usuários não deve ser null");
-	    assertTrue(users.length > 0, "Deve haver pelo menos 1 usuário no banco");
-	}
-	
-	@Test
+        UserDTO[] users = response.getBody().as(UserDTO[].class);
+        assertNotNull(users, "A lista de usuários não deve ser null");
+        assertTrue(users.length > 0, "Deve haver pelo menos 1 usuário no banco");
+    }
+    
+    @Test
     @Order(5)
-	public void testGetUserById() {
-	    UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
+    public void testGetUserById() {
+        UserDTO userDTO = new UserDTO(null, "João da Silva", "11122233344", "joao@literatura.com.br", "senha123", new BigDecimal("1000.00"), UserType.COMMON);
 
-	    clearDatabase();
-	    
-	    log.info("Enviando requisição para criar usuário: {}", userDTO);
+        clearDatabase();
+        
+        loggerUtil.logInfo("Teste", "Enviando requisição para criar usuário: {}", userDTO);
 
-	    Response createUserResponse = given()
-	            .spec(specification)
-	            .contentType(ContentType.JSON)
-	            .body(userDTO)
-	            .when()
-	            .post("/user")
-	            .then()
-	            .extract()
-	            .response();
+        Response createUserResponse = given()
+                .spec(specification)
+                .contentType(ContentType.JSON)
+                .body(userDTO)
+                .when()
+                .post("/user")
+                .then()
+                .extract()
+                .response();
 
-	    log.info("Resposta da criação de usuário: {}", createUserResponse.asString());
+        loggerUtil.logInfo("Teste", "Resposta da criação de usuário: {}", createUserResponse.asString());
 
-	    assertEquals(HttpStatus.OK.value(), createUserResponse.statusCode());
+        assertEquals(HttpStatus.OK.value(), createUserResponse.statusCode());
 
-	    UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
-	    assertNotNull(createdUser, "A resposta não deve ser null");
-	    assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
+        UserDTO createdUser = createUserResponse.getBody().as(UserDTO.class);
+        assertNotNull(createdUser, "A resposta não deve ser null");
+        assertNotNull(createdUser.id(), "O ID do usuário não deve ser null");
         assertEquals(userDTO.nome(), createdUser.nome(), "O nome do usuário deve ser igual ao esperado");
-		
-		Long userId = createdUser.id();
+        
+        Long userId = createdUser.id();
 
-        log.info("Enviando requisição para buscar usuário por ID: {}", userId);
+        loggerUtil.logInfo("Teste", "Enviando requisição para buscar usuário por ID: {}", userId);
     
         Response response = given()
                 .spec(specification)
@@ -271,10 +263,10 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 .extract()
                 .response();
 
-        log.info("Resposta da busca de usuário por ID: {}", response.asString());
+        loggerUtil.logInfo("Teste", "Resposta da busca de usuário por ID: {}", response.asString());
 
         if (response.statusCode() != HttpStatus.OK.value()) {
-            log.info("Erro ao buscar usuário por ID: {}", response.asString());
+            loggerUtil.logInfo("Teste", "Erro ao buscar usuário por ID: {}", response.asString());
         }
 
         assertEquals(HttpStatus.OK.value(), response.statusCode());
@@ -282,5 +274,5 @@ public class UserControllerIntegrationTest extends AbstractIntegrationTest {
         UserDTO user = response.getBody().as(UserDTO.class);
         assertNotNull(user, "O usuário não deve ser null");
         assertEquals(userId, user.id());
-	}
+    }
 }
