@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClientImpl;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +39,9 @@ public class AuthorizationClientImplTest {
 
     private AuthorizationClientImpl authorizationClient;
 
+    @Mock
+    private LoggerUtil loggerUtil;
+    
     @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
@@ -51,7 +55,7 @@ public class AuthorizationClientImplTest {
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
         // Inicializa a instância manualmente
-        authorizationClient = new AuthorizationClientImpl(webClientBuilder);
+        authorizationClient = new AuthorizationClientImpl(webClientBuilder, loggerUtil);
     }
 
     @Test
