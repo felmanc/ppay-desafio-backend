@@ -23,7 +23,7 @@ public class UserTypeDeserializer extends JsonDeserializer<UserType> {
         loggerUtil.logDebug("Deserialização", "Texto obtido para deserialização: {}", text);
 
         try {
-            UserType userType = UserType.fromString(text);
+            UserType userType = UserType.fromString(text, loggerUtil);
             loggerUtil.logInfo("Deserialização", "UserType deserializado com sucesso: {}", userType);
             return userType;
         } catch (IllegalArgumentException e) {

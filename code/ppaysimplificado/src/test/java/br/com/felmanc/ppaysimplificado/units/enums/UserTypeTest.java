@@ -28,9 +28,9 @@ public class UserTypeTest {
 
     @Test
     public void testUserTypeFromString() {
-        assertEquals(UserType.COMMON, UserType.fromString("common"));
-        assertEquals(UserType.MERCHANT, UserType.fromString("merchant"));
-        assertThrows(RuntimeException.class, () -> UserType.fromString("invalid"));
+        assertEquals(UserType.COMMON, UserType.fromString("common", loggerUtil));
+        assertEquals(UserType.MERCHANT, UserType.fromString("merchant", loggerUtil));
+        assertThrows(RuntimeException.class, () -> UserType.fromString("invalid", loggerUtil));
     }
 
     @Test
