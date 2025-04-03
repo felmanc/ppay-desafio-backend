@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import br.com.felmanc.ppaysimplificado.converters.UserTypeDeserializer;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
 
-public class testUserTypeDeserializer {
+public class UserTypeDeserializerTest {
 
 	@Test
 	public void testUserTypeDeserializerValid() throws Exception {
