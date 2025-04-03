@@ -12,12 +12,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
 import br.com.felmanc.ppaysimplificado.dtos.NotificationDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +41,11 @@ class NotificationClientImplTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
+    @MockitoBean
     private NotificationClientImpl notificationClient;
+
+    @Mock
+    private LoggerUtil loggerUtil;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +53,7 @@ class NotificationClientImplTest {
         when(webClientBuilder.build()).thenReturn(webClient);
         
         // Create the instance manually
-        notificationClient = new NotificationClientImpl(webClientBuilder);
+        notificationClient = new NotificationClientImpl(webClientBuilder, loggerUtil);
     }
 
     @SuppressWarnings("unchecked")

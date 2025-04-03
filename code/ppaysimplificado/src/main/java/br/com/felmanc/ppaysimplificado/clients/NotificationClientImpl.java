@@ -11,22 +11,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.felmanc.ppaysimplificado.dtos.NotificationDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
-import lombok.extern.slf4j.Slf4j;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 import reactor.core.publisher.Mono;
 
-@Slf4j
 @Component
 public class NotificationClientImpl implements NotificationClient {
 
     private final WebClient webClient;
+    private final LoggerUtil loggerUtil;
 
-    public NotificationClientImpl(WebClient.Builder webClientBuilder) {
+
+    public NotificationClientImpl(WebClient.Builder webClientBuilder, LoggerUtil loggerUtil) {
         this.webClient = webClientBuilder.baseUrl("https://util.devi.tools/api/v1").build();
+        this.loggerUtil = loggerUtil;
     }
 
     @Override
     public boolean sendNotification(UserEntity user, String message) {
-        log.info("[Notificação] Iniciando envio de notificação para o email: {}", user.getEmail());
+        loggerUtil.logInfo("Notificação", "Iniciando envio de notificação para o email: {}", user.getEmail());
         try {
             NotificationDTO notification = new NotificationDTO(user.getEmail(), message);
 
@@ -39,23 +41,23 @@ public class NotificationClientImpl implements NotificationClient {
                     clientResponse -> {
                         HttpStatusCode statusCode = clientResponse.statusCode();
                         if (statusCode.equals(HttpStatusCode.valueOf(500))) {
-                            log.error("[Erro] Erro no servidor ao enviar notificação.");
+                            loggerUtil.logError("Erro", "Erro no servidor ao enviar notificação.");
                             return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro no servidor."));
                         } else if (statusCode.equals(HttpStatusCode.valueOf(504))) {
-                            log.error("[Erro] Timeout no gateway ao enviar notificação.");
+                            loggerUtil.logError("Erro", "Timeout no gateway ao enviar notificação.");
                             return Mono.error(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Timeout do gateway."));
                         } else {
-                            log.warn("[Aviso] Erro inesperado: {}", statusCode);
+                            loggerUtil.logWarn("Aviso", "Erro inesperado: {}", statusCode);
                             return clientResponse.createException();
                         }
                     })
                 .bodyToMono(String.class)
                 .block();
 
-            log.debug("[Notificação] Resposta do serviço: {}", response);
+            loggerUtil.logDebug("Notificação", "Resposta do serviço: {}", response);
 
             if (response == null && HttpStatus.NO_CONTENT.value() == 204) {
-                log.info("[Notificação] Envio concluído com sucesso ("+ HttpStatus.NO_CONTENT.value() + " - No Content).");
+                loggerUtil.logInfo("Notificação", "Envio concluído com sucesso ("+ HttpStatus.NO_CONTENT.value() + " - No Content).");
                 return true;
             }
 
@@ -63,17 +65,17 @@ public class NotificationClientImpl implements NotificationClient {
             JsonNode jsonNode = objectMapper.readTree(response);
 
             String status = jsonNode.path("status").asText();
-            log.debug("[Notificação] Status retornado pela API: {}", status);
+            loggerUtil.logDebug("Notificação", "Status retornado pela API: {}", status);
 
             if ("success".equalsIgnoreCase(status)) {
-                log.info("[Notificação] Notificação enviada com sucesso.");
+                loggerUtil.logInfo("Notificação", "Notificação enviada com sucesso.");
                 return true;
             } else {
-                log.warn("[Aviso] Notificação não foi enviada com sucesso, status: {}", status);
+                loggerUtil.logWarn("Aviso", "Notificação não foi enviada com sucesso, status: {}", status);
                 return false;
             }
         } catch (Exception e) {
-            log.error("[Erro] Exceção ao enviar notificação para o email: {}", user.getEmail(), e);
+            loggerUtil.logError("Erro", "Exceção ao enviar notificação para o email: {}", user.getEmail(), e);
             return false;
         }
     }
