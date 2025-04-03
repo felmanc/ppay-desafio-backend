@@ -7,22 +7,27 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 
 import br.com.felmanc.ppaysimplificado.enums.UserType;
-import lombok.extern.slf4j.Slf4j;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
-@Slf4j
 public class UserTypeDeserializer extends JsonDeserializer<UserType> {
+
+    private final LoggerUtil loggerUtil;
+
+    public UserTypeDeserializer(LoggerUtil loggerUtil) {
+        this.loggerUtil = loggerUtil;
+    }
 
     @Override
     public UserType deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         String text = p.getText();
-        log.debug("[Deserialização] Texto obtido para deserialização: {}", text);
+        loggerUtil.logDebug("Deserialização", "Texto obtido para deserialização: {}", text);
 
         try {
             UserType userType = UserType.fromString(text);
-            log.info("[Deserialização] UserType deserializado com sucesso: {}", userType);
+            loggerUtil.logInfo("Deserialização", "UserType deserializado com sucesso: {}", userType);
             return userType;
         } catch (IllegalArgumentException e) {
-            log.error("[Erro] Falha na deserialização do UserType: {}", text, e);
+            loggerUtil.logError("Erro", "Falha na deserialização do UserType: {}", text, e);
             throw e;
         }
     }

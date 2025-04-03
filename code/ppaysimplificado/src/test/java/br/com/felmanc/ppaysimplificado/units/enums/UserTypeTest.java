@@ -5,15 +5,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 
 import br.com.felmanc.ppaysimplificado.converters.UserTypeDeserializer;
 import br.com.felmanc.ppaysimplificado.enums.UserType;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
 public class UserTypeTest {
+
+	@Mock
+	private LoggerUtil loggerUtil;
+
+	@BeforeEach
+	void setUp() {
+	    loggerUtil = mock(LoggerUtil.class); // Inicializa o mock de LoggerUtil
+	}
+
     @Test
     public void testUserTypeFromString() {
         assertEquals(UserType.COMMON, UserType.fromString("common"));
@@ -30,7 +42,7 @@ public class UserTypeTest {
         DeserializationContext context = mock(DeserializationContext.class);
 
         // Testando a desserialização
-        UserTypeDeserializer deserializer = new UserTypeDeserializer();
+        UserTypeDeserializer deserializer = new UserTypeDeserializer(loggerUtil);
         UserType result = deserializer.deserialize(parser, context);
 
         assertEquals(UserType.COMMON, result);
@@ -43,7 +55,7 @@ public class UserTypeTest {
 
         DeserializationContext context = mock(DeserializationContext.class);
 
-        UserTypeDeserializer deserializer = new UserTypeDeserializer();
+        UserTypeDeserializer deserializer = new UserTypeDeserializer(loggerUtil);
 
         // Validando exceção para valores inválidos
         assertThrows(RuntimeException.class, () -> deserializer.deserialize(parser, context));
