@@ -29,6 +29,7 @@ import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.services.UserService;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
@@ -42,6 +43,9 @@ public class UserServiceTest {
 	@Mock
 	private UserMapper userMapper;
 
+    @Mock
+    private LoggerUtil loggerUtil;
+    
 	@Test
 	void testGetAllUsersWithUsers() {
 		UserEntity userEntity = new UserEntity(1L, "John Doe", "12345678900", "john@example.com", "password",

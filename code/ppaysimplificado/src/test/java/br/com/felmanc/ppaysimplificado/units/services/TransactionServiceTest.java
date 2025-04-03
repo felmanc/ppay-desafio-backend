@@ -36,6 +36,7 @@ import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
+import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -60,6 +61,9 @@ class TransactionServiceTest {
 
     @Mock
     private WebClient.Builder webClientBuilder;
+    
+    @Mock
+    private LoggerUtil loggerUtil;
     
     @InjectMocks
     private TransactionService transactionService;
