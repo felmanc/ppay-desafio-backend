@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
+import br.com.felmanc.ppaysimplificado.clients.AuthorizationClient;
 import br.com.felmanc.ppaysimplificado.clients.AuthorizationClientImpl;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
@@ -37,7 +38,7 @@ public class AuthorizationClientImplTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
-    private AuthorizationClientImpl authorizationClient;
+    private AuthorizationClient authorizationClient;
 
     @Mock
     private LoggerUtil loggerUtil;

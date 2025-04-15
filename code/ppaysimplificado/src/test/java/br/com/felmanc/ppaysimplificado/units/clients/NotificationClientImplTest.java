@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import br.com.felmanc.ppaysimplificado.clients.NotificationClient;
 import br.com.felmanc.ppaysimplificado.clients.NotificationClientImpl;
 import br.com.felmanc.ppaysimplificado.dtos.NotificationDTO;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
@@ -42,7 +43,7 @@ class NotificationClientImplTest {
     private WebClient.ResponseSpec responseSpec;
 
     @MockitoBean
-    private NotificationClientImpl notificationClient;
+    private NotificationClient notificationClient;
 
     @Mock
     private LoggerUtil loggerUtil;
