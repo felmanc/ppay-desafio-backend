@@ -1,6 +1,5 @@
 package br.com.felmanc.ppaysimplificado.services;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,11 +12,11 @@ import br.com.felmanc.ppaysimplificado.dtos.TransactionDTO;
 import br.com.felmanc.ppaysimplificado.entities.TransactionEntity;
 import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.enums.TransactionStatus;
-import br.com.felmanc.ppaysimplificado.enums.UserType;
 import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionException;
 import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
+import br.com.felmanc.ppaysimplificado.validations.TransactionValidator;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -26,7 +25,7 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserService userService;
-    private final NotificationClient notificationClient; 
+    private final NotificationClient notificationClient;
     private final TransactionMapper transactionMapper;
     private final AuthorizationClient authorizationClient;
     private final LoggerUtil loggerUtil;
@@ -55,8 +54,8 @@ public class TransactionService {
 
         validateTransaction(transactionDTO, payer, payee);
 
-        payer.setBalance(payer.getBalance().subtract(transactionDTO.valor()));
-        payee.setBalance(payee.getBalance().add(transactionDTO.valor()));
+        UserBalanceService.debitar(payer, transactionDTO.valor());
+        UserBalanceService.creditar(payee, transactionDTO.valor());
 
         loggerUtil.logInfo("Transação", "Saldo após débito do pagador: {}", payer.getBalance());
         loggerUtil.logInfo("Transação", "Saldo após crédito do recebedor: {}", payee.getBalance());
@@ -100,11 +99,6 @@ public class TransactionService {
             throw new IllegalArgumentException("O objeto TransactionDTO não pode ser nulo.");
         }
 
-        if (transactionDTO.valor() == null || transactionDTO.valor().compareTo(BigDecimal.ZERO) <= 0) {
-            loggerUtil.logError("Validação", "Valor da transação deve ser maior que zero. Valor recebido: {}", transactionDTO.valor());
-            throw new IllegalArgumentException("O valor da transação deve ser maior que zero.");
-        }
-
         if (payer == null) {
             loggerUtil.logError("Validação", "Pagador não encontrado. ID: {}", transactionDTO.idPagador());
             throw new IllegalArgumentException("Pagador não encontrado.");
@@ -115,20 +109,7 @@ public class TransactionService {
             throw new IllegalArgumentException("Recebedor não encontrado.");
         }
 
-        if (transactionDTO.idPagador().equals(transactionDTO.idRecebedor())) {
-            loggerUtil.logError("Validação", "Pagador e recebedor não podem ser o mesmo.");
-            throw new IllegalArgumentException("Pagador e recebedor não podem ser o mesmo.");
-        }
-
-        if (payer.getType().equals(UserType.MERCHANT)) {
-            loggerUtil.logError("Validação", "Pagador não pode ser lojista. ID: {}", transactionDTO.idPagador());
-            throw new IllegalArgumentException("Pagador não pode ser lojista.");
-        }
-
-        if (payer.getBalance().compareTo(transactionDTO.valor()) < 0) {
-            loggerUtil.logError("Validação", "Saldo insuficiente para o pagador com ID: {}", transactionDTO.idPagador());
-            throw new IllegalArgumentException("Saldo insuficiente.");
-        }
+        TransactionValidator.validarTransacao(payer, payee, transactionDTO.valor());
     }
 
     private boolean authorizeTransaction(TransactionEntity transaction) {
