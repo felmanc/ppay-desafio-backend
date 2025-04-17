@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +33,7 @@ import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
+import br.com.felmanc.ppaysimplificado.validators.UserValidator;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
@@ -43,21 +47,53 @@ public class UserServiceTest {
 	@Mock
 	private UserMapper userMapper;
 
-    @Mock
-    private LoggerUtil loggerUtil;
-    
+	@Mock
+	private LoggerUtil loggerUtil;
+
+	@Mock
+	private UserValidator userValidator;
+
+	private UserDTO criarUserDTO(Long id, String nome, String cpf, String email, String senha, BigDecimal saldo, UserType tipo) {
+		return new UserDTO(id, nome, cpf, email, senha, saldo, tipo);
+	}
+
+	private UserDTO criarUserDTOObrigatorios(String nome, String cpf, String email, String senha, UserType tipo) {
+		return criarUserDTO(null, nome, cpf, email, senha, null, tipo);
+	}
+
+	private UserDTO criarEConfigurarValidador(String nome, String cpf, String email, String senha, UserType tipo) {
+		UserDTO userDTO = criarUserDTOObrigatorios(nome, cpf, email, senha, tipo);
+		configurarValidadorRealComDTO(userDTO);
+		return userDTO;
+	}
+
+	private UserDTO criarEConfigurarValidador(String nome, String cpf, String email, String senha, BigDecimal saldo, UserType tipo) {
+		UserDTO userDTO = criarUserDTO(null, nome, cpf, email, senha, saldo, tipo);
+		configurarValidadorRealComDTO(userDTO);
+		return userDTO;
+	}
+
+	private void configurarValidadorRealComDTO(UserDTO userDTO) {
+		doCallRealMethod().when(userValidator).validarDadosUsuario(
+				eq(userDTO.nome()), eq(userDTO.cpf()),
+				eq(userDTO.email()), eq(userDTO.senha()),
+				eq(userDTO.tipo())
+		);
+	}
+
 	@Test
 	void testGetAllUsersWithUsers() {
 		UserEntity userEntity = new UserEntity(1L, "John Doe", "12345678900", "john@example.com", "password",
 				BigDecimal.ZERO, UserType.COMMON);
 		when(userRepository.findAll()).thenReturn(Collections.singletonList(userEntity));
-		when(userMapper.toDTO(any(UserEntity.class))).thenReturn(new UserDTO(null, "John Doe", "12345678900",
+		when(userMapper.toDTO(any(UserEntity.class))).thenReturn(criarUserDTO(null, "John Doe", "12345678900",
 				"john@example.com", "password", BigDecimal.ZERO, UserType.COMMON));
 
 		List<UserDTO> users = userService.getAllUsers();
 		assertFalse(users.isEmpty());
 		assertEquals(1, users.size());
 		verify(userRepository, times(1)).findAll();
+		verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
@@ -67,6 +103,7 @@ public class UserServiceTest {
 		List<UserDTO> users = userService.getAllUsers();
 		assertTrue(users.isEmpty());
 		verify(userRepository, times(1)).findAll();
+		verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
@@ -74,13 +111,14 @@ public class UserServiceTest {
 		UserEntity userEntity = new UserEntity(1L, "John Doe", "12345678900", "john@example.com", "password",
 				BigDecimal.ZERO, UserType.COMMON);
 		when(userRepository.findById(anyLong())).thenReturn(Optional.of(userEntity));
-		when(userMapper.toDTO(any(UserEntity.class))).thenReturn(new UserDTO(null, "John Doe", "12345678900",
+		when(userMapper.toDTO(any(UserEntity.class))).thenReturn(criarUserDTO(null, "John Doe", "12345678900",
 				"john@example.com", "password", BigDecimal.ZERO, UserType.COMMON));
 
 		UserDTO user = userService.getUserById(1L);
 		assertNotNull(user);
 		assertEquals("John Doe", user.nome());
 		verify(userRepository, times(1)).findById(anyLong());
+		verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
@@ -96,12 +134,12 @@ public class UserServiceTest {
 
 		assertTrue(actualMessage.contains(expectedMessage));
 		verify(userRepository, times(1)).findById(anyLong());
+		verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
 	void testCreateUserCommon() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO,
-				UserType.COMMON);
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", UserType.COMMON);
 		UserEntity userEntity = new UserEntity(null, "John Doe", "12345678900", "john@example.com", "password",
 				BigDecimal.ZERO, UserType.COMMON);
 
@@ -116,12 +154,13 @@ public class UserServiceTest {
 		assertNotNull(createdUser);
 		assertEquals("John Doe", createdUser.nome());
 		verify(userRepository, times(1)).save(any(UserEntity.class));
+		verify(userRepository, times(1)).findByCpf(anyString());
+		verify(userRepository, times(1)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserMerchant() {
-		UserDTO userDTO = new UserDTO(null, "Jane Doe", "98765432100", "jane@example.com", "password", BigDecimal.ZERO,
-				UserType.MERCHANT);
+		UserDTO userDTO = criarEConfigurarValidador("Jane Doe", "98765432100", "jane@example.com", "password", UserType.MERCHANT);
 		UserEntity userEntity = new UserEntity(null, "Jane Doe", "98765432100", "jane@example.com", "password",
 				BigDecimal.ZERO, UserType.MERCHANT);
 
@@ -136,14 +175,15 @@ public class UserServiceTest {
 		assertNotNull(createdUser);
 		assertEquals("Jane Doe", createdUser.nome());
 		verify(userRepository, times(1)).save(any(UserEntity.class));
+		verify(userRepository, times(1)).findByCpf(anyString());
+		verify(userRepository, times(1)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithDuplicateCpf() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO,
-				UserType.COMMON);
-		UserEntity userEntity = new UserEntity(null, "John Doe", "12345678900", "john@example.com", "password",
-				BigDecimal.ZERO, UserType.COMMON);
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", UserType.COMMON);
+		UserEntity userEntity = new UserEntity(null, "Jane Smith", "12345678900", "jane@example.com", "differentPassword",
+				BigDecimal.ZERO, UserType.MERCHANT);
 
 		when(userMapper.toEntity(any(UserDTO.class))).thenReturn(userEntity);
 		when(userRepository.findByCpf(anyString())).thenReturn(Optional.of(userEntity));
@@ -157,17 +197,19 @@ public class UserServiceTest {
 
 		assertTrue(actualMessage.contains(expectedMessage));
 		verify(userRepository, times(0)).save(any(UserEntity.class));
+		verify(userRepository, times(1)).findByCpf(anyString());
+		verify(userRepository, times(0)).findByEmail(anyString());
 	}
 
 	@Test
-	void testCreateUserWithDuplicateEmail() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password", BigDecimal.ZERO,
-				UserType.COMMON);
+	void testCreateUserWithDuplicateEmail_Behavioral() {
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", UserType.COMMON);
 		UserEntity userEntity = new UserEntity(null, "John Doe", "12345678900", "john@example.com", "password",
 				BigDecimal.ZERO, UserType.COMMON);
 
 		when(userMapper.toEntity(any(UserDTO.class))).thenReturn(userEntity);
 		when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(userEntity));
+		when(userRepository.findByCpf(anyString())).thenReturn(Optional.empty());
 
 		Exception exception = assertThrows(IllegalArgumentException.class, () -> {
 			userService.createUser(userDTO);
@@ -175,15 +217,17 @@ public class UserServiceTest {
 
 		String expectedMessage = "Já existe um usuário com este e-mail.";
 		String actualMessage = exception.getMessage();
-
 		assertTrue(actualMessage.contains(expectedMessage));
-		verify(userRepository, times(0)).save(any(UserEntity.class));
+
+		verify(userRepository, never()).save(any(UserEntity.class));
+
+		verify(userRepository, times(1)).findByCpf(anyString());
+		verify(userRepository, times(1)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithNegativeBalance() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password",
-				new BigDecimal("-100.0"), UserType.COMMON);
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", new BigDecimal("-100.0"), UserType.COMMON);
 		UserEntity userEntity = new UserEntity(null, "John Doe", "12345678900", "john@example.com", "password",
 				new BigDecimal("-100.0"), UserType.COMMON);
 
@@ -199,6 +243,8 @@ public class UserServiceTest {
 		assertEquals("John Doe", createdUser.nome());
 		assertEquals(new BigDecimal("-100.0"), createdUser.saldo());
 		verify(userRepository, times(1)).save(any(UserEntity.class));
+		verify(userRepository, times(1)).findByCpf(anyString());
+		verify(userRepository, times(1)).findByEmail(anyString());
 	}
 
 	@Test
@@ -210,7 +256,7 @@ public class UserServiceTest {
 		when(userRepository.findAll()).thenReturn(List.of(user1, user2));
 		when(userMapper.toDTO(any(UserEntity.class))).thenAnswer(invocation -> {
 			UserEntity entity = invocation.getArgument(0);
-			return new UserDTO(null, entity.getName(), entity.getCpf(), entity.getEmail(), entity.getPassword(),
+			return criarUserDTO(null, entity.getName(), entity.getCpf(), entity.getEmail(), entity.getPassword(),
 					entity.getBalance(), entity.getType());
 		});
 
@@ -218,12 +264,12 @@ public class UserServiceTest {
 		assertFalse(users.isEmpty());
 		assertEquals(2, users.size());
 		verify(userRepository, times(1)).findAll();
+		verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
 	void testCreateUserWithInvalidCpf() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "invalid_cpf", "john@example.com", "password", BigDecimal.ZERO,
-				UserType.COMMON);
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "invalid_cpf", "john@example.com", "password", UserType.COMMON);
 
 		Exception exception = assertThrows(RuntimeException.class, () -> {
 			userService.createUser(userDTO);
@@ -234,12 +280,13 @@ public class UserServiceTest {
 
 		assertTrue(actualMessage.contains(expectedMessage));
 		verify(userRepository, times(0)).save(any(UserEntity.class));
+		verify(userRepository, times(0)).findByCpf(anyString());
+		verify(userRepository, times(0)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithInvalidEmail() {
-		UserDTO userDTO = new UserDTO(null, "John Doe", "12345678900", "invalid_email", "password", BigDecimal.ZERO,
-				UserType.COMMON);
+		UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "invalid_email", "password", UserType.COMMON);
 
 		Exception exception = assertThrows(RuntimeException.class, () -> {
 			userService.createUser(userDTO);
@@ -250,55 +297,83 @@ public class UserServiceTest {
 
 		assertTrue(actualMessage.contains(expectedMessage));
 		verify(userRepository, times(0)).save(any(UserEntity.class));
+		verify(userRepository, times(0)).findByCpf(anyString());
+		verify(userRepository, times(0)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithoutName() {
-		UserDTO userWithoutName = new UserDTO(null, null, "12345678900", "john@example.com", "password",
-				BigDecimal.ZERO, UserType.COMMON);
+		UserDTO userWithoutName = criarEConfigurarValidador(null, "12345678900", "john@example.com", "password", UserType.COMMON);
 		Exception exceptionName = assertThrows(IllegalArgumentException.class, () -> {
 			userService.createUser(userWithoutName);
 		});
 		assertTrue(exceptionName.getMessage().contains("O nome do usuário é obrigatório."));
+		verify(userRepository, times(0)).save(any());
+		verify(userRepository, times(0)).findByCpf(anyString());
+		verify(userRepository, times(0)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithoutCpf() {
-		UserDTO userWithoutCpf = new UserDTO(null, "John Doe", null, "john@example.com", "password", BigDecimal.ZERO,
-				UserType.COMMON);
+		UserDTO userWithoutCpf = criarEConfigurarValidador("John Doe", null, "john@example.com", "password", UserType.COMMON);
+
 		Exception exceptionCpf = assertThrows(IllegalArgumentException.class, () -> {
 			userService.createUser(userWithoutCpf);
 		});
+
 		assertTrue(exceptionCpf.getMessage().contains("O CPF/CNPJ é obrigatório."));
+		verify(userRepository, times(0)).save(any());
+		verify(userRepository, times(0)).findByCpf(anyString());
+		verify(userRepository, times(0)).findByEmail(anyString());
 	}
 
 	@Test
 	void testCreateUserWithoutEmail() {
-		UserDTO userWithoutEmail = new UserDTO(null, "John Doe", "12345678900", null, "password", BigDecimal.ZERO,
-				UserType.COMMON);
-		Exception exceptionEmail = assertThrows(IllegalArgumentException.class, () -> {
-			userService.createUser(userWithoutEmail);
-		});
-		assertTrue(exceptionEmail.getMessage().contains("O e-mail é obrigatório."));
+	    UserDTO userWithoutEmail = criarEConfigurarValidador("John Doe", "12345678900", null, "password", UserType.COMMON);
+	    Exception exceptionEmail = assertThrows(IllegalArgumentException.class, () -> {
+	        userService.createUser(userWithoutEmail);
+	    });
+	    assertTrue(exceptionEmail.getMessage().contains("O e-mail é obrigatório."));
+	    verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
 	void testCreateUserWithoutPassword() {
-		UserDTO userWithoutPassword = new UserDTO(null, "John Doe", "12345678900", "john@example.com", null,
-				BigDecimal.ZERO, UserType.COMMON);
-		Exception exceptionPassword = assertThrows(IllegalArgumentException.class, () -> {
-			userService.createUser(userWithoutPassword);
-		});
-		assertTrue(exceptionPassword.getMessage().contains("A senha é obrigatória."));
+	    UserDTO userWithoutPassword = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", null, UserType.COMMON);
+
+	    Exception exceptionPassword = assertThrows(IllegalArgumentException.class, () -> {
+	        userService.createUser(userWithoutPassword);
+	    });
+	    assertTrue(exceptionPassword.getMessage().contains("A senha é obrigatória."));
+	    verify(userRepository, times(0)).save(any());
 	}
 
 	@Test
 	void testCreateUserWithoutType() {
-		UserDTO userWithoutType = new UserDTO(null, "John Doe", "12345678900", "john@example.com", "password",
-				BigDecimal.ZERO, null);
-		Exception exceptionType = assertThrows(IllegalArgumentException.class, () -> {
-			userService.createUser(userWithoutType);
-		});
-		assertTrue(exceptionType.getMessage().contains("O tipo do usuário (COMMON ou MERCHANT) é obrigatório."));
+	    UserDTO userWithoutType = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", null);
+	    Exception exceptionType = assertThrows(IllegalArgumentException.class, () -> {
+	        userService.createUser(userWithoutType);
+	    });
+	    assertTrue(exceptionType.getMessage().contains("O tipo do usuário (COMMON ou MERCHANT) é obrigatório."));
+	    verify(userRepository, times(0)).save(any());
 	}
+
+    @Test
+    void testCreateUserDatabaseError() {
+        UserDTO userDTO = criarEConfigurarValidador("John Doe", "12345678900", "john@example.com", "password", UserType.COMMON);
+        UserEntity userEntity = new UserEntity(null, "John Doe", "12345678900", "john@example.com", "password",
+                BigDecimal.ZERO, UserType.COMMON);
+
+        when(userMapper.toEntity(any())).thenReturn(userEntity);
+        when(userRepository.findByCpf(anyString())).thenReturn(Optional.empty());
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.save(any())).thenThrow(new RuntimeException("Erro ao salvar no banco de dados"));
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            userService.createUser(userDTO);
+        });
+
+        assertTrue(exception.getMessage().contains("Erro ao salvar no banco de dados"));
+        verify(userRepository, times(1)).save(any());
+    }
 }

@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +37,7 @@ import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.services.TransactionService;
+import br.com.felmanc.ppaysimplificado.services.UserBalanceService;
 import br.com.felmanc.ppaysimplificado.services.UserService;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
 
@@ -46,6 +49,9 @@ class TransactionServiceTest {
     
     @Mock
     private UserService userService;
+
+    @Mock
+    private UserBalanceService userBalanceService;
     
     @Mock
     private NotificationClient notificationClient;
@@ -156,19 +162,34 @@ class TransactionServiceTest {
         when(notificationClient.sendNotification(any(UserEntity.class), anyString())).thenReturn(true);
         when(transactionMapper.toDTO(any(TransactionEntity.class))).thenReturn(transactionDTO);
 
-        // Execução
+        doAnswer(invocation -> {
+            UserEntity user = invocation.getArgument(0);
+            BigDecimal amount = invocation.getArgument(1);
+            user.setBalance(user.getBalance().subtract(amount));
+            return null; // Métodos void retornam null em lambdas
+        }).when(userBalanceService).debitar(eq(payer), eq(new BigDecimal("100.00")));
+
+        doAnswer(invocation -> {
+            UserEntity user = invocation.getArgument(0);
+            BigDecimal amount = invocation.getArgument(1);
+            user.setBalance(user.getBalance().add(amount));
+            return null; // Métodos void retornam null em lambdas
+        }).when(userBalanceService).creditar(eq(payee), eq(new BigDecimal("100.00")));
+
         TransactionDTO result = assertDoesNotThrow(() -> transactionService.createTransaction(transactionDTO));
 
         // Verificações
         assertNotNull(result);
         assertEquals(TransactionStatus.COMPLETED.name(), result.status());
-        assertEquals(new BigDecimal("100.00"), payer.getBalance());
-        assertEquals(new BigDecimal("150.00"), payee.getBalance());
+            assertEquals(new BigDecimal("100.00"), payer.getBalance());
+            assertEquals(new BigDecimal("150.00"), payee.getBalance());
         verify(transactionRepository, times(1)).save(any(TransactionEntity.class));
         verify(notificationClient, times(1)).sendNotification(any(UserEntity.class), anyString());
         verify(authorizationClient).authorizeTransaction();
+        verify(userBalanceService, times(1)).debitar(eq(payer), eq(new BigDecimal("100.00")));
+        verify(userBalanceService, times(1)).creditar(eq(payee), eq(new BigDecimal("100.00")));
     }
-
+    
     @Test
     @Transactional
     void testCreateTransactionUnauthorized() {
