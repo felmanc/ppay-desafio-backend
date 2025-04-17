@@ -12,7 +12,7 @@ import br.com.felmanc.ppaysimplificado.entities.UserEntity;
 import br.com.felmanc.ppaysimplificado.mappers.UserMapper;
 import br.com.felmanc.ppaysimplificado.repositories.UserRepository;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
-
+import br.com.felmanc.ppaysimplificado.validators.UserValidator;
 
 @Service
 public class UserService {
@@ -20,42 +20,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final LoggerUtil loggerUtil;
+    private final UserValidator userValidator;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, LoggerUtil loggerUtil) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, LoggerUtil loggerUtil, UserValidator userValidator) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.loggerUtil = loggerUtil;
+        this.userValidator = userValidator;
     }
 
-    private void campoObrigatorio(Object campo, String mensagem) {
-        if (campo == null) {
-            throw new IllegalArgumentException(mensagem);
-        }
-    }
-
-    private void campoFormato(String campo, String formato, String mensagem) {
-        if (!campo.matches(formato)) {
-            throw new IllegalArgumentException(mensagem);
-        }
-    }    
-    
-    private UserEntity validateUser(UserDTO userDTO) {
+    private UserEntity validateAndConvertUser(UserDTO userDTO) {
         loggerUtil.logInfo("Validação", "Iniciando validação do usuário");
 
         try {
-            campoObrigatorio(userDTO.nome(), "O nome do usuário é obrigatório.");
-            campoObrigatorio(userDTO.cpf(), "O CPF/CNPJ é obrigatório.");
-            campoObrigatorio(userDTO.email(), "O e-mail é obrigatório.");
-            campoObrigatorio(userDTO.senha(), "A senha é obrigatória.");
-            campoObrigatorio(userDTO.tipo(), "O tipo do usuário (COMMON ou MERCHANT) é obrigatório.");
-            
-            campoFormato(userDTO.cpf(),
-                    "\\d{11}|\\d{14}",
-                    "O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos e somente números.");
-            campoFormato(userDTO.email(),
-                    "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$",
-                    "O e-mail deve estar em um formato válido.");
-            
+            userValidator.validarDadosUsuario(userDTO.nome(), userDTO.cpf(), userDTO.email(), userDTO.senha(), userDTO.tipo());
+
             UserEntity userEntity = userMapper.toEntity(userDTO);
             loggerUtil.logDebug("Validação", "Usuário convertido para entidade");
 
@@ -89,7 +68,7 @@ public class UserService {
         loggerUtil.logInfo("Criação", "Iniciando criação de usuário");
 
         try {
-            UserEntity userEntity = validateUser(userDTO);
+        	UserEntity userEntity = validateAndConvertUser(userDTO);
             loggerUtil.logInfo("Criação", "Validação do usuário concluída");
             
             userEntity.setBalance(Optional.ofNullable(userEntity.getBalance()).orElse(new BigDecimal("0.0")));
@@ -117,7 +96,7 @@ public class UserService {
                 .map(userMapper::toDTO)
                 .collect(Collectors.toList());
     }
-    
+
     public UserDTO getUserById(Long id) {
         loggerUtil.logInfo("Consulta", "Buscando usuário pelo ID: {}", id);
         UserEntity userEntity = findUserEntityById(id);
@@ -131,5 +110,9 @@ public class UserService {
                     return new IllegalArgumentException("Usuário com o ID " + id + " não foi encontrado.");
                 });
         return userEntity;
+    }
+
+    public void validarSaldo(UserEntity user, BigDecimal valor) {
+        userValidator.validarSaldoSuficiente(user, valor);
     }
 }

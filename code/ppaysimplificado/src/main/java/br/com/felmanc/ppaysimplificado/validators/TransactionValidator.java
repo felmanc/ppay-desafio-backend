@@ -1,4 +1,4 @@
-package br.com.felmanc.ppaysimplificado.validations;
+package br.com.felmanc.ppaysimplificado.validators;
 
 import java.math.BigDecimal;
 

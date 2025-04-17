@@ -16,7 +16,7 @@ import br.com.felmanc.ppaysimplificado.exceptions.UnauthorizedTransactionExcepti
 import br.com.felmanc.ppaysimplificado.mappers.TransactionMapper;
 import br.com.felmanc.ppaysimplificado.repositories.TransactionRepository;
 import br.com.felmanc.ppaysimplificado.utils.LoggerUtil;
-import br.com.felmanc.ppaysimplificado.validations.TransactionValidator;
+import br.com.felmanc.ppaysimplificado.validators.TransactionValidator;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -29,19 +29,21 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final AuthorizationClient authorizationClient;
     private final LoggerUtil loggerUtil;
+    private final UserBalanceService userBalanceService;
 
     public TransactionService(TransactionRepository transactionRepository, UserService userService,
-            NotificationClient notificationClientImpl, TransactionMapper transactionMapper,
-            AuthorizationClient authorizationClient, LoggerUtil loggerUtil) {
-        this.transactionRepository = transactionRepository;
-        this.userService = userService;
-        this.notificationClient = notificationClientImpl;
-        this.transactionMapper = transactionMapper;
-        this.authorizationClient = authorizationClient;
-        this.loggerUtil = loggerUtil;
-    }
+			NotificationClient notificationClient, TransactionMapper transactionMapper,
+			AuthorizationClient authorizationClient, LoggerUtil loggerUtil, UserBalanceService userBalanceService) {
+		this.transactionRepository = transactionRepository;
+		this.userService = userService;
+		this.notificationClient = notificationClient;
+		this.transactionMapper = transactionMapper;
+		this.authorizationClient = authorizationClient;
+		this.loggerUtil = loggerUtil;
+		this.userBalanceService = userBalanceService;
+	}
 
-    @Transactional
+	@Transactional
     public TransactionDTO createTransaction(TransactionDTO transactionDTO) {
         loggerUtil.logInfo("Transação", "Iniciando transferência de {} do usuário {} para o usuário {}",
                 transactionDTO.valor(), transactionDTO.idPagador(), transactionDTO.idRecebedor());
@@ -54,8 +56,8 @@ public class TransactionService {
 
         validateTransaction(transactionDTO, payer, payee);
 
-        UserBalanceService.debitar(payer, transactionDTO.valor());
-        UserBalanceService.creditar(payee, transactionDTO.valor());
+        userBalanceService.debitar(payer, transactionDTO.valor());
+        userBalanceService.creditar(payee, transactionDTO.valor());
 
         loggerUtil.logInfo("Transação", "Saldo após débito do pagador: {}", payer.getBalance());
         loggerUtil.logInfo("Transação", "Saldo após crédito do recebedor: {}", payee.getBalance());
